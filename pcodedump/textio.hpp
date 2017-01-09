@@ -1,0 +1,45 @@
+#ifndef _73FA3A84_4431_426F_A727_612E03F69820
+#define _73FA3A84_4431_426F_A727_612E03F69820
+
+#include <cstdint>
+#include <string>
+#include <ios>
+#include "types.hpp"
+
+namespace pcodedump {
+
+	template<typename T>
+	class FmtSentry {
+		using ios_t = std::basic_ios<T>;
+		using fmtflags = typename ios_t::fmtflags;
+
+
+	public:
+		FmtSentry(ios_t &stream) : flags{ stream.flags() }, stream{ stream } {}
+		~FmtSentry() {
+			stream.flags(flags);
+		}
+
+	private:
+		fmtflags flags;
+		ios_t &stream;
+	};
+
+	void line_hexdump(std::uint8_t * start, std::uint8_t * finish);
+
+	void line_chardump(std::uint8_t * start, std::uint8_t * finish);
+
+	void hexdump(std::wstring leader, std::uint8_t * start, std::uint8_t * finish);
+
+	void line_hexdump(buff_t::iterator start, buff_t::iterator finish);
+
+	void line_chardump(buff_t::iterator start, buff_t::iterator finish);
+
+	void hexdump(std::wstring leader, buff_t::iterator start, buff_t::iterator finish);
+
+	void hexdump(buff_t &buffer);
+
+}
+
+
+#endif // !_73FA3A84_4431_426F_A727_612E03F69820

@@ -1,0 +1,11 @@
+Sample/
+Debug/
+Release/
+x64/
+.vs/
+*.obj
+*.o
+*.user
+*.suo
+*.VC.db
+
