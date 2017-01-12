@@ -1,5 +1,3 @@
-#pragma once
-
 #include "basecode.hpp"
 #include "types.hpp"
 #include "directory.hpp"
