@@ -20,7 +20,7 @@ namespace pcodedump {
 	bool listProcs;
 	bool addressOrder;
 	bool disasmProcs;
-	wstring filename;
+	string filename;
 	cpu_t cpu;
 
 	namespace {
@@ -54,7 +54,7 @@ namespace pcodedump {
 
 	/* Parse program options and store the values in global values. Return true if the program
 	   should then continue processing. */
-	bool parseOptions(int argc, wchar_t *argv[], wchar_t *envp[]) {
+	bool parseOptions(int argc, char *argv[], char *envp[]) {
 		using namespace boost::program_options;
 
 		try {
@@ -74,12 +74,12 @@ namespace pcodedump {
 					("link", bool_switch(&showLinkage), "Display linker information");
 			options_description allopts{ "All options" };
 			allopts.add_options()
-				("input-file", wvalue<wstring>(&filename), "");
+				("input-file", value<string>(&filename), "");
 			allopts.add(opts);
 			positional_options_description positional{};
 			positional.add("input-file", 1);
 			variables_map vm;
-			store(wcommand_line_parser(argc, argv).options(allopts).positional(positional).run(), vm);
+			store(command_line_parser(argc, argv).options(allopts).positional(positional).run(), vm);
 			notify(vm);
 			listProcs |= disasmProcs;
 

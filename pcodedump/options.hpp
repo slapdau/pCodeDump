@@ -12,10 +12,10 @@ namespace pcodedump {
 	extern bool listProcs;
 	extern bool addressOrder;
 	extern bool disasmProcs;
-	extern std::wstring filename;
+	extern std::string filename;
 	extern cpu_t cpu;
 
-	bool parseOptions(int argc, wchar_t *argv[], wchar_t *envp[]);
+	bool parseOptions(int argc, char *argv[], char *envp[]);
 
 }
 

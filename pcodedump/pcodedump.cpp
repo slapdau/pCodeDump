@@ -11,9 +11,10 @@
 #include <string>
 
 
-using namespace std;
 
 namespace pcodedump {
+
+    using namespace std;
 
 #if 0
 	void
@@ -23,14 +24,14 @@ namespace pcodedump {
 	}
 #endif
 
-	unique_ptr<buff_t> readFile(wstring filename) {
-		using file_t = std::basic_ifstream<std::uint8_t>;
-		file_t file{filename, ios_base::in | ios_base::binary | ios_base::ate};
+	unique_ptr<buff_t> readFile(string filename) {
+		using file_t = std::ifstream;
+	    using iterator_t = istreambuf_iterator<file_t::char_type>;
+
+	    file_t file(filename, ios_base::binary);
 		file.exceptions(ifstream::failbit);
-		streamsize size = file.tellg();
-		auto buffer = make_unique<buff_t>(static_cast<int>(size));
-		file.seekg(0);
-		file.read(buffer->data(), static_cast<unsigned int>(size));
+		auto buffer = make_unique<buff_t>();
+		buffer->assign(iterator_t(file), iterator_t());
 		file.close();
 		return buffer;
 	}
@@ -38,7 +39,7 @@ namespace pcodedump {
 }
 
 int
-wmain(int argc, wchar_t *argv[], wchar_t *envp[]) {	
+main(int argc, char *argv[], char *envp[]) {
 	using namespace pcodedump;
 
 	try {
