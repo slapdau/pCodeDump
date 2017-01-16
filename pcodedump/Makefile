@@ -1,7 +1,63 @@
-CXXFLAGS=-std=c++14 -O0 -g -I /home/craig/Development/boost_1_62_0
+CXXFLAGS = -std=c++14 -Wall
 
-pcodedump: basecode.o directory.o linkage.o native6502.o options.o pcodedump.o pcode.o textio.o text.o
-	$(CXX) -L /home/craig/Development/boost_1_62_0/stage/lib -l boost_program_options-gcc53-mt-1_62 -o $@ $^
-	
+# Be default, the Release version will be made.
+# 'make CONFIG=Debug all' will change this.
+
+CONFIG=Release
+
+ifeq ($(CONFIG),Release)
+CXXFLAGS += -O2
+else ifeq ($(CONFIG),Debug)
+CXXFLAGS += -O0 -g
+else
+$(error Unknown build configuration: $(CONFIG))
+endif
+
+outputDir = $(CONFIG)
+
+# On Fedora Linux (and maybe other distros) if the package boost is installed then
+# there is no need to download and/or build your own and reference it.
+# Set BOOSTDIR to the location you extracted to and built at.  You may need to mess
+# with the values for LDLIBS and LDFLAGS.
+
+# This is known to build with 1.58.  All later versions should work.
+
+#BOOSTDIR = /home/me/Development/boost_1_62_0
+
+ifdef BOOSTDIR
+
+CPPFLAGS += -I $(BOOSTDIR)
+
+LDFLAGS += -L $(BOOSTDIR)/stage/lib
+
+LDLIBS += -lboost_program_options-gcc53-mt-1_62
+
+else
+
+LDLIBS += -lboost_program_options
+
+endif
+
+sources = pcodedump.cpp options.cpp textio.cpp directory.cpp text.cpp basecode.cpp pcode.cpp native6502.cpp linkage.cpp
+
+objects = $(addprefix $(outputDir)/,$(sources:.cpp=.o))
+
+target = $(outputDir)/pcodedump
+
+all: $(target)
+
+$(target): $(objects)
+	$(CXX) $(LDFLAGS) $(LDLIBS) -o $(target) $(objects)
+
+$(outputDir)/%.o: %.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+$(objects): | $(outputDir)
+ 
+$(outputDir):
+	mkdir $(outputDir)
+
 clean:
-	rm -f pcodedump *.o
+	rm -Rf $(outputDir)
+
+.PHONY: clean all
