@@ -9,12 +9,13 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <memory>
 
 
+using namespace std;
 
 namespace pcodedump {
 
-    using namespace std;
 
 #if 0
 	void

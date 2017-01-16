@@ -116,7 +116,7 @@ namespace pcodedump {
 	unique_ptr<LinkageSegment> SegmentDirectoryEntry::createLinkageSegment()
 	{
 		if (hasLinkage(this->segmentKind)) {
-			assert(this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != this->nextSegBlock);
+			assert(this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock));
 			return make_unique<LinkageSegment>(*this, this->buffer.data() + (this->codeBlock + this->codeLength / BLOCK_SIZE + 1) * BLOCK_SIZE);
 		} else {
 			return unique_ptr<LinkageSegment>(nullptr);
@@ -140,7 +140,7 @@ namespace pcodedump {
 			os << L"-----" << endl;
 		}
 		os << L"   Link blocks : ";
-		if (this->codeBlock && this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != this->nextSegBlock) {
+		if (this->codeBlock && this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock)) {
 			os << (this->codeBlock + this->codeLength / BLOCK_SIZE + 1) << L" - " << (this->nextSegBlock - 1) << endl;
 		} else {
 			os << L"-----" << endl;
@@ -209,7 +209,7 @@ namespace pcodedump {
 			// of 0 and are conveniently sorted to the start of vector out of the way.
 			sort(begin(segmentStarts), end(segmentStarts), [](const auto &left, const auto &right) { return get<1>(left) < get<1>(right); });
 			vector<tuple<int, int>> result;
-			for (int index = 0; index != segmentStarts.size() - 1; ++index) {
+			for (unsigned int index = 0; index != segmentStarts.size() - 1; ++index) {
 				int directoryIndex, segmentStart;
 				tie(directoryIndex, segmentStart) = segmentStarts[index];
 				// If the segment start is zero it's a data segment.  Retain that information with a 0 for the end.

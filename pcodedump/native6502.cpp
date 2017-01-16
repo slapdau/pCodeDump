@@ -430,7 +430,6 @@ namespace pcodedump {
 
 	/* Write the instruction address, relative to the segment start.  Indicate the procedure entry point. */
 	void Native6502Procedure::printIc(std::wostream & os, std::uint8_t * current) const {
-		int ic = static_cast<int>(distance(procBegin, current));
 		if (getEnterIc() == distance(procBegin, current)) {
 			os << L"  ENTER:" << endl;
 		}
@@ -470,7 +469,6 @@ namespace pcodedump {
 	std::uint8_t * Native6502Procedure::decode_absoluteindirect(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		auto value = reinterpret_cast<little_uint16_t *>(current + 1);
 		os << opCode << L" (" << formatAbsoluteAddress(current + 1) << L")" << endl;
 		return current + 3;
 	}
@@ -478,7 +476,6 @@ namespace pcodedump {
 	std::uint8_t * Native6502Procedure::decode_absoluteindirectindexed(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		auto value = reinterpret_cast<little_uint16_t *>(current + 1);
 		os << opCode << L" (" << formatAbsoluteAddress(current + 1) << L",X)" << endl;
 		return current + 3;
 	}
