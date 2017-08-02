@@ -65,7 +65,7 @@ main(int argc, char *argv[], char *envp[]) {
 		}
 		return 0;
 	} catch (ios::failure &ex) {
-		cout << ex.code().message() << endl;
+		// cout << ex.code().message() << endl;
 		return 1;
 	}
 }
