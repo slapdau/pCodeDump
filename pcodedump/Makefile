@@ -22,8 +22,6 @@ outputDir = $(CONFIG)
 
 # This is known to build with 1.58.  All later versions should work.
 
-#BOOSTDIR = /home/me/Development/boost_1_62_0
-
 ifdef BOOSTDIR
 
 CPPFLAGS += -I $(BOOSTDIR)
