@@ -30,13 +30,9 @@ CPPFLAGS += -I $(BOOSTDIR)
 
 LDFLAGS += -L $(BOOSTDIR)/stage/lib
 
-LDLIBS += -lboost_program_options-gcc53-mt-1_62
-
-else
-
-LDLIBS += -lboost_program_options
-
 endif
+
+LDLIBS += -l:libboost_program_options.a
 
 sources = pcodedump.cpp options.cpp textio.cpp directory.cpp text.cpp basecode.cpp pcode.cpp native6502.cpp linkage.cpp
 
@@ -47,7 +43,7 @@ target = $(outputDir)/pcodedump
 all: $(target)
 
 $(target): $(objects)
-	$(CXX) $(LDFLAGS) $(LDLIBS) -o $(target) $(objects)
+	$(CXX) $(LDFLAGS) -o $(target) $(objects) $(LDLIBS)
 
 $(outputDir)/%.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
