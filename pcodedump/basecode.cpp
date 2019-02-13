@@ -51,8 +51,7 @@ namespace pcodedump {
 		int currentStart = 0;
 		vector<ProcRange> procRange;
 		transform(std::begin(procEnd), std::end(procEnd), back_inserter(procRange), [&currentStart, this](const auto & value) {
-			int procNumber, end;
-			tie(procNumber, end) = value;
+			auto [procNumber, end] = value;
 			auto result = make_tuple(procNumber, segBegin + currentStart, end - currentStart);
 			currentStart = end;
 			return result;
