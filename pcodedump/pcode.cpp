@@ -296,12 +296,16 @@ namespace pcodedump {
 	};
 
 
-	int PcodeProcedure::getEnterIc() const {
-		return defererenceSelfPtr(procBegin, &rawAttributeTable->enterIc);
+	std::uint8_t * PcodeProcedure::getEnterIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t *>(&rawAttributeTable->enterIc));
 	}
 
-	int PcodeProcedure::getExitIc() const {
-		return defererenceSelfPtr(procBegin, &rawAttributeTable->exitIc);
+	std::uint8_t * PcodeProcedure::getExitIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t *>(&rawAttributeTable->exitIc));
+	}
+
+	uint8_t * PcodeProcedure::jtab(int index) const {
+		return reinterpret_cast<uint8_t *>(&rawAttributeTable->procedureNumber) + index;
 	}
 
 	void PcodeProcedure::writeHeader(uint8_t* segBegin, std::wostream& os) const {
@@ -328,15 +332,14 @@ namespace pcodedump {
 	}
 
 	void PcodeProcedure::printIc(std::wostream& os, uint8_t * current)  const {
-		int ic = static_cast<int>(distance(procBegin, current));
-		if (getEnterIc() == ic) {
+		if (getEnterIc() == current) {
 			os << L"ENTER  :" << endl;
 		}
-		if (getExitIc() == ic) {
+		if (getExitIc() == current) {
 			os << L"EXIT   :" << endl;
 		}
 		os << L"   ";
-		os << hex << setfill(L'0') << right << setw(4) << ic + distance(segment.begin(), procBegin) << L": ";
+		os << hex << setfill(L'0') << right << setw(4) << static_cast<int>(current - getProcBegin()) << L": ";
 	}
 
 	uint8_t * PcodeProcedure::decode_implied(std::wostream& os, wstring &opCode, uint8_t * current)  const {
@@ -454,12 +457,12 @@ namespace pcodedump {
 	/* sb */
 	uint8_t * PcodeProcedure::decode_jump(std::wostream& os, wstring &opCode, uint8_t * current) const {
 		printIc(os, current++);
-		int8_t offset = *reinterpret_cast<int8_t *>(current++);
-		int address;
+		auto offset = getNext<int8_t>(current);
+		intptr_t address;
 		if (offset >= 0) {
-			address = static_cast<int>(distance(segment.begin(), current)) + offset;
+			address = (current + offset) - getProcBegin();
 		} else {
-			address = defererenceSelfPtr(segment.begin(), &rawAttributeTable->procedureNumber + offset);
+			address = derefSelfPtr(jtab(offset)) - getProcBegin();
 		}
 		os << setfill(L' ') << left << setw(9) << opCode << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
 		return current;
@@ -467,7 +470,7 @@ namespace pcodedump {
 
 	/* db */
 	uint8_t * PcodeProcedure::decode_return(std::wostream& os, wstring &opCode, uint8_t * current) const {
-		printIc(os, current);
+		printIc(os, current++);
 		os << opCode << endl;
 		return nullptr;
 	}
@@ -484,25 +487,23 @@ namespace pcodedump {
 	/* word aligned -> idx_min, idx_max, (uj sb), table */
 	uint8_t * PcodeProcedure::decode_case(std::wostream& os, wstring &opCode, uint8_t * current)  const {
 		printIc(os, current++);
-		if (reinterpret_cast<long long>(current) & 0x1) {
+		if (reinterpret_cast<uintptr_t>(current) & 0x1) {
 			current++;
 		}
-		little_int16_t * min = reinterpret_cast<little_int16_t *>(current);
-		current += sizeof(little_int16_t);
-		little_int16_t * max = reinterpret_cast<little_int16_t *>(current);
-		current += sizeof(little_int16_t);
-		current++;
-		int8_t offset = *reinterpret_cast<int8_t *>(current++);
-		int address;
+		auto min = getNext<little_int16_t>(current);
+		auto max = getNext<little_int16_t>(current);
+		current++; // Skip the UJP opcode
+		auto offset = getNext<int8_t>(current);
+		intptr_t address;
 		if (offset >= 0) {
-			address = static_cast<int>(distance(segment.begin(), current)) + offset;
+			address = (current + offset) - getProcBegin();
 		} else {
-			address = defererenceSelfPtr(segment.begin(), &rawAttributeTable->procedureNumber + offset);
+			address = derefSelfPtr(jtab(offset)) - getProcBegin();
 		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << *min << ", " << *max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;
-		for (int count = *min; count != *max + 1; ++count) {
-			address = defererenceSelfPtr(procBegin, current);
-			current += sizeof(little_int16_t);
+		os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;
+		for (int count = min; count != max + 1; ++count) {
+			address = derefSelfPtr(current) - getProcBegin();
+			getNext<little_int16_t>(current);
 			os << setfill(L' ') << setw(18) << L"" << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
 		}
 		return current;

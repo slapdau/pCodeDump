@@ -29,9 +29,15 @@ namespace pcodedump {
 
 	using buff_t = std::vector<std::uint8_t>;
 
-	/* Returns the offset from some base pointer to the location pointed at by a self pointer. */
-	inline int defererenceSelfPtr(std::uint8_t * base, void * selfPtr) {
-		return static_cast<int>(std::distance(base, static_cast<std::uint8_t *>(selfPtr)) - *static_cast<boost::endian::little_int16_t *>(selfPtr));
+	inline std::uint8_t * derefSelfPtr(void * selfPtr) {
+		return static_cast<std::uint8_t *>(selfPtr) - *reinterpret_cast<boost::endian::little_int16_t *>(selfPtr);
+	}
+
+	template <typename T>
+	T getNext(std::uint8_t * & address) {
+		T val = * reinterpret_cast<T *>(address);
+		address += sizeof(T);
+		return val;
 	}
 
 }

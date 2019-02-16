@@ -36,8 +36,18 @@ namespace pcodedump {
 		virtual void disassemble(std::uint8_t* segBegin, std::wostream& os) const = 0;
 
 		virtual ~Procedure() {}
+		
+		int getProcedureNumber() const {
+			return procedureNumber;
+		}
 
-		std::uint8_t * getProcBegin() { return procBegin; }
+		std::uint8_t * getProcBegin() const {
+			return procBegin;
+		}
+
+		bool contains(std::uint8_t const * address) const {
+			return procBegin <= address && address < procBegin + procLength;
+		}
 
 	protected:
 		CodeSegment & segment;

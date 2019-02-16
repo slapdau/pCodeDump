@@ -40,19 +40,21 @@ namespace pcodedump {
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information. */
 	vector<CodeSegment::ProcRange> CodeSegment::getProcRanges() {
-		vector<tuple<int, int>> procEnd;
-		auto procZeroPtr = reinterpret_cast<little_int16_t *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) - 1;
+
+		auto procPtrs = reinterpret_cast<little_int16_t *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) - 1;
+		vector<tuple<int, uint8_t *>> procEnd;
 		for (int index = 0; index != header->numProcedures; ++index) {
-			int end = defererenceSelfPtr(segBegin, procZeroPtr - index) + sizeof(little_int16_t);
-			procEnd.emplace_back(make_tuple(index, end));
+			procEnd.emplace_back(make_tuple(index, derefSelfPtr(procPtrs - index) + sizeof(little_int16_t)));
 		}
+
 		// Sort by address ascending.
 		sort(std::begin(procEnd), std::end(procEnd), [](const auto & left, const auto & right) { return get<1>(left) < get<1>(right); });
-		int currentStart = 0;
+
 		vector<ProcRange> procRange;
+		auto currentStart = segBegin;
 		transform(std::begin(procEnd), std::end(procEnd), back_inserter(procRange), [&currentStart, this](const auto & value) {
 			auto [procNumber, end] = value;
-			auto result = make_tuple(procNumber, segBegin + currentStart, end - currentStart);
+			auto result = make_tuple(procNumber, currentStart, static_cast<int>(end - currentStart));
 			currentStart = end;
 			return result;
 		});

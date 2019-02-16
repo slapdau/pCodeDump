@@ -39,7 +39,7 @@ namespace pcodedump {
 		};
 	public:
 		using base = Procedure;
-		Native6502Procedure(CodeSegment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength);
+		Native6502Procedure(Native6502Segment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength);
 
 		static void initialiseCpu();
 
@@ -47,8 +47,13 @@ namespace pcodedump {
 		void disassemble(std::uint8_t* segBegin, std::wostream& os) const;
 
 	private:
-		uint8_t * readRelocations(std::vector<int> &table, std::uint8_t * rawTable);
-		int getEnterIc() const;
+		Native6502Segment & segment;
+
+		using Relocations = std::vector<std::uint8_t const *>;
+
+
+		std::uint8_t * readRelocations(Relocations &table, std::uint8_t * rawTable);
+		std::uint8_t * getEnterIc() const;
 
 		void printIc(std::wostream& os, std::uint8_t * current) const;
 
@@ -76,13 +81,12 @@ namespace pcodedump {
 		RawNative6502AttributeTable * rawAttributeTable;
 		uint8_t * procEnd;
 
-		void relocateProcAddress(int address);
-		std::wstring formatAbsoluteAddress(std::uint8_t * address) const;
+		std::wstring formatAbsoluteAddress(std::uint8_t const * address) const;
 
-		std::vector<int> baseRelocations;
-		std::vector<int> segRelocations;
-		std::vector<int> procRelocations;
-		std::vector<int> interpRelocations;
+		Relocations baseRelocations;
+		Relocations segRelocations;
+		Relocations procRelocations;
+		Relocations interpRelocations;
 	};
 
 	using Procedures = std::vector<std::shared_ptr<Procedure>>;
@@ -94,6 +98,8 @@ namespace pcodedump {
 		Native6502Segment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength);
 
 		void disassemble(std::wostream& os) const override;
+
+		Procedure * findProcedure(std::uint8_t const * address) const;
 
 	private:
 		std::unique_ptr<Procedures> initProcedures();

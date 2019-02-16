@@ -47,55 +47,64 @@ namespace pcodedump {
 	}
 
 	/* Read one of the 4 6502 procedure relocation tables. Return a pointer to the start of the table. */
-	uint8_t * Native6502Procedure::readRelocations(vector<int> &table, uint8_t * rawTable) {
+	uint8_t * Native6502Procedure::readRelocations(Relocations &table, uint8_t * rawTable) {
 		uint8_t * current = rawTable;
 		current -= sizeof(little_uint16_t);
 		int total = *reinterpret_cast<little_uint16_t *>(current);
 		for (int count = 0; count != total; ++count) {
 			current -= sizeof(little_uint16_t);
-			int address = defererenceSelfPtr(procBegin, current);
-			table.push_back(address);
+			table.push_back(derefSelfPtr(current));
 		}
 		return current;
+	}
+
+	namespace {
+
+		template <typename T>
+		bool contains(vector<T> vect, T value) {
+			return find(cbegin(vect), cend(vect), value) != cend(vect);
+		}
+
 	}
 
 	/* Format a 16-bit absolute address for display.  The address is embedded in a 6502 instruction.
 	   If the address is referred to by either the segment or interpreter relocation tables, indicate
 	   this in the formatting. */
-	wstring Native6502Procedure::formatAbsoluteAddress(uint8_t * address) const {
-		auto value = *reinterpret_cast<little_uint16_t *>(address);
-		auto offset = distance(procBegin, address);
+	wstring Native6502Procedure::formatAbsoluteAddress(uint8_t const * address) const {
+		auto value = *reinterpret_cast<little_uint16_t const *>(address);
 		wostringstream result;
-		if (find(begin(segRelocations), end(segRelocations), offset) != segRelocations.end()) {
-			result << L"Seg#" << dec << rawAttributeTable->relocationSeg << "+";
-		} else if (find(begin(interpRelocations), end(interpRelocations), offset) != interpRelocations.end()) {
+		if (pcodedump::contains(segRelocations, address)) {
+			uint8_t const * target = segment.begin() + value;
+			Procedure const * targetProc = segment.findProcedure(target);
+			if (targetProc) {
+				value = static_cast<int>(target - targetProc->getProcBegin());
+				result << L".proc#" << dec << targetProc->getProcedureNumber() << "+";
+			} else {
+				result << L".seg+";
+			}
+		} else if (pcodedump::contains(interpRelocations, address)) {
 			result << L".interp+";
+		} else if (pcodedump::contains(baseRelocations, address)) {
+			if (rawAttributeTable->relocationSeg != 0) {
+				result << L".seg#" << dec << rawAttributeTable->relocationSeg << "+";
+			} else {
+				result << L".base+";
+			}
+		} else if (pcodedump::contains(procRelocations, address)) {
+			result << L".proc+";
 		}
 		result << L"$" << uppercase << hex << setfill(L'0') << right << setw(4) << value;
 		return result.str();
 	}
 
-	/* Adjust an absolute address pointed to by the procedure relocation table so that the stored value is
-	   relative to segment base.  When 6502 is disassembled, the instruction addresses are displayed
-	   related to the segment base, so this enable inspection of the control flow. */
-	void Native6502Procedure::relocateProcAddress(int address) {
-		uint8_t * addressPtr = procBegin + address;
-		auto value = reinterpret_cast<little_uint16_t *>(addressPtr);
-		*value = *value + static_cast<uint16_t>(distance(segment.begin(), procBegin));
-	}
-
-	Native6502Procedure::Native6502Procedure(CodeSegment  & segment, int procedureNumber, std::uint8_t * procBegin, int procLength) :
+	Native6502Procedure::Native6502Procedure(Native6502Segment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength) :
 		base(segment, procedureNumber, procBegin, procLength),
+		segment{ segment },
 		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable *>(procBegin + procLength - sizeof(RawNative6502AttributeTable)) }
 	{
 		this->procEnd = procBegin + procLength - sizeof(RawNative6502AttributeTable);
-		if (this->rawAttributeTable->procedureNumber == 0) {
-			for (auto table : { &baseRelocations, &segRelocations, &procRelocations, &interpRelocations }) {
-				procEnd = readRelocations(*table, procEnd);
-			}
-		}
-		for (auto address : procRelocations) {
-			relocateProcAddress(address);
+		for (auto table : { &baseRelocations, &segRelocations, &procRelocations, &interpRelocations }) {
+			procEnd = readRelocations(*table, procEnd);
 		}
 	}
 
@@ -414,9 +423,7 @@ namespace pcodedump {
 	void Native6502Procedure::initialiseCpu() {
 		if (cpu == cpu_t::_65c02) {
 			for (auto entry : dispatch_65c02) {
-				int instruction;
-				dispatch_t dispatchUpdate;
-				tie(instruction, dispatchUpdate) = entry;
+				auto[instruction, dispatchUpdate] = entry;
 				dispatch[instruction] = dispatchUpdate;
 			}
 		}
@@ -433,24 +440,22 @@ namespace pcodedump {
 		uint8_t * ic = procBegin;
 		os << uppercase;
 		while (ic && ic < procEnd) {
-			wstring opcode;
-			decode_function_t decode_function;
-			tie(opcode, decode_function) = dispatch[*ic];
+			auto[opcode, decode_function] = dispatch[*ic];
 			ic = (this->*decode_function)(os, opcode, ic);
 		}
 	}
 
-	int Native6502Procedure::getEnterIc() const {
-		return defererenceSelfPtr(procBegin, &rawAttributeTable->enterIc);
+	std::uint8_t * Native6502Procedure::getEnterIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t *>(&rawAttributeTable->enterIc));
 	}
 
 	/* Write the instruction address, relative to the segment start.  Indicate the procedure entry point. */
 	void Native6502Procedure::printIc(std::wostream & os, std::uint8_t * current) const {
-		if (getEnterIc() == distance(procBegin, current)) {
+		if (getEnterIc() == current) {
 			os << L"  ENTER:" << endl;
 		}
 		os << L"   ";
-		os << hex << setfill(L'0') << right << setw(4) << distance(segment.begin(), current) << L": ";
+		os << hex << setfill(L'0') << right << setw(4) <<  current - this->getProcBegin() << L": ";
 	}
 
 	std::uint8_t * Native6502Procedure::decode_implied(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
@@ -546,7 +551,7 @@ namespace pcodedump {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
 		auto value = reinterpret_cast<little_int8_t *>(current + 1);
-		os << opCode << L" $" << hex << setfill(L'0') << right << setw(4) << distance(segment.begin(), current + 2 + *value) << endl;
+		os << opCode << L" $" << hex << setfill(L'0') << right << setw(4) << distance(getProcBegin(), current + 2 + *value) << endl;
 		return current + 2;
 	}
 
@@ -584,15 +589,22 @@ namespace pcodedump {
 		}
 	}
 
+	Procedure * Native6502Segment::findProcedure(std::uint8_t const * address) const {
+		auto result = find_if(cbegin(*entries), cend(*entries), [address](Procedures::value_type const & proc) {return proc->contains(address); });
+		if (result == cend(*entries)) {
+			return nullptr;
+		} else {
+			return result->get();
+		}
+	}
+
 	/* Get the memory ranges for procedures in this segment and construct a suitable Procedure object
 	   for each.  Native code segments can contain both p-code and native code. */
 	std::unique_ptr<Procedures> Native6502Segment::initProcedures() {
 		auto procRange = getProcRanges();
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure> {
-			uint8_t * start;
-			int procNumber, length;
-			tie(procNumber, start, length) = value;
+			auto[procNumber, start, length] = value;
 			// If the procedure number is recorded as 0, then it's a native procedure.
 			if (*(start + length - 2)) {
 				return make_shared<PcodeProcedure>(*this, procNumber + 1, start, length);

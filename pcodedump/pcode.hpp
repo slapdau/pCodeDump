@@ -52,10 +52,12 @@ namespace pcodedump {
 		void disassemble(std::uint8_t* segBegin, std::wostream& os) const;
 
 	private:
-		int getEnterIc() const;
-		int getExitIc() const;
+		std::uint8_t * getEnterIc() const;
+		std::uint8_t * getExitIc() const;
 
 		void printIc(std::wostream& os, std::uint8_t * current)  const;
+
+		std::uint8_t * jtab(int index) const;
 
 		std::uint8_t * decode_implied(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
 		std::uint8_t * decode_unsignedByte(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
