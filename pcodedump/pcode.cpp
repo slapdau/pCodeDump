@@ -605,14 +605,16 @@ namespace pcodedump {
 	}
 
 	PcodeSegment::PcodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength) :
-		base(directoryEntry, segBegin, segLength), entries{ initProcedures() }
-	{}
+		base(directoryEntry, segBegin, segLength)
+	{
+		entries = this->initProcedures();
+	}
 
 	/* Get the procedure code memory ranges and construct a vector of procedure objedts. P-code segments only
 	   have p-code procedures. */
-	unique_ptr<PcodeProcedures> PcodeSegment::initProcedures() {
+	unique_ptr<Procedures> PcodeSegment::initProcedures() {
 		auto procRange = getProcRanges();
-		auto result = make_unique<PcodeProcedures>();
+		auto result = make_unique<Procedures>();
 		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) {
 			uint8_t * start;
 			int procNumber, length;
@@ -623,7 +625,7 @@ namespace pcodedump {
 	}
 
 	void PcodeSegment::disassemble(std::wostream& os) const {
-		PcodeProcedures procs{ *entries };
+		Procedures procs{ *entries };
 		if (addressOrder) {
 			sort(std::begin(procs), std::end(procs), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
 		}

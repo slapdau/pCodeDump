@@ -89,8 +89,6 @@ namespace pcodedump {
 		Relocations interpRelocations;
 	};
 
-	using Procedures = std::vector<std::shared_ptr<Procedure>>;
-
 	class Native6502Segment : public CodeSegment {
 
 	public:
@@ -99,11 +97,9 @@ namespace pcodedump {
 
 		void disassemble(std::wostream& os) const override;
 
-		Procedure * findProcedure(std::uint8_t const * address) const;
+	protected:
+		std::unique_ptr<Procedures> initProcedures() override;
 
-	private:
-		std::unique_ptr<Procedures> initProcedures();
-		std::unique_ptr<Procedures> entries;
 	};
 
 }

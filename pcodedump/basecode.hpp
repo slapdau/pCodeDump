@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <tuple>
 #include <vector>
+#include <memory>
 #include <boost/endian/arithmetic.hpp>
 
 namespace pcodedump {
@@ -56,6 +57,8 @@ namespace pcodedump {
 		int procLength;
 	};
 
+	using Procedures = std::vector<std::shared_ptr<Procedure>>;
+
 	class SegmentDirectoryEntry;
 
 	class CodeSegment {
@@ -71,7 +74,7 @@ namespace pcodedump {
 
 		CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength);
 
-		virtual ~CodeSegment();
+		virtual ~CodeSegment() = 0;
 
 		int getSegmentNumber() const {
 			return header->segmentNumber;
@@ -87,10 +90,14 @@ namespace pcodedump {
 
 		virtual void writeHeader(std::wostream& os) const;
 		virtual void disassemble(std::wostream& os) const = 0;
+		Procedure * findProcedure(std::uint8_t const * address) const;
+
 
 	protected:
 		using ProcRange = std::tuple<int, std::uint8_t *, int>; // Procedure number, start, length
 		std::vector<ProcRange> getProcRanges();
+		virtual std::unique_ptr<Procedures> initProcedures() = 0;
+
 
 	protected:
 		std::uint8_t * segBegin;
@@ -98,6 +105,9 @@ namespace pcodedump {
 
 	private:
 		RawProcedureDirectoryHead * header;
+
+	protected:
+		std::unique_ptr<Procedures> entries;
 	};
 
 }

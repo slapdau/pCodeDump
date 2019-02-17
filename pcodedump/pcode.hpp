@@ -85,8 +85,6 @@ namespace pcodedump {
 		RawPcodeAttributeTable * rawAttributeTable;
 	};
 
-	using PcodeProcedures = std::vector<std::shared_ptr<PcodeProcedure>>;
-
 	class PcodeSegment : public CodeSegment {
 	public:
 		using base = CodeSegment;
@@ -95,9 +93,9 @@ namespace pcodedump {
 
 		void disassemble(std::wostream& os) const override;
 
-	private:
-		std::unique_ptr<PcodeProcedures> initProcedures();
-		std::unique_ptr<PcodeProcedures> entries;
+	protected:
+		std::unique_ptr<Procedures> initProcedures() override;
+
 	};
 
 }

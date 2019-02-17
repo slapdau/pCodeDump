@@ -63,6 +63,16 @@ namespace pcodedump {
 		return procRange;
 	}
 
+	Procedure * CodeSegment::findProcedure(std::uint8_t const * address) const {
+		auto result = find_if(cbegin(*entries), cend(*entries), [address](Procedures::value_type const & proc) {return proc->contains(address); });
+		if (result == cend(*entries)) {
+			return nullptr;
+		} else {
+			return result->get();
+		}
+	}
+
+
 	void CodeSegment::writeHeader(std::wostream& os) const {
 		os << L"    Procedures : " << getNumProcedures() << endl;
 	}

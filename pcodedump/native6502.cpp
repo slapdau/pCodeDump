@@ -572,8 +572,10 @@ namespace pcodedump {
 	}
 
 	Native6502Segment::Native6502Segment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength) :
-		base(directoryEntry, segBegin, segLength), entries{ initProcedures() }
-	{}
+		base(directoryEntry, segBegin, segLength)
+	{
+		entries = initProcedures();
+	}
 
 	void Native6502Segment::disassemble(std::wostream & os) const {
 		Procedures procs{ *entries };
@@ -586,15 +588,6 @@ namespace pcodedump {
 				entry->disassemble(segBegin, os);
 				os << endl;
 			}
-		}
-	}
-
-	Procedure * Native6502Segment::findProcedure(std::uint8_t const * address) const {
-		auto result = find_if(cbegin(*entries), cend(*entries), [address](Procedures::value_type const & proc) {return proc->contains(address); });
-		if (result == cend(*entries)) {
-			return nullptr;
-		} else {
-			return result->get();
 		}
 	}
 
