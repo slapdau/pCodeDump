@@ -46,50 +46,50 @@ namespace pcodedump {
 
 	public:
 		using base = Procedure;
-		PcodeProcedure(CodeSegment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength);
+		PcodeProcedure(CodeSegment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength);
 
-		void writeHeader(std::uint8_t* segBegin, std::wostream& os) const;
-		void disassemble(std::uint8_t* segBegin, std::wostream& os) const;
+		void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const;
+		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;
 
 	private:
-		std::uint8_t * getEnterIc() const;
-		std::uint8_t * getExitIc() const;
+		std::uint8_t const * getEnterIc() const;
+		std::uint8_t const * getExitIc() const;
 
-		void printIc(std::wostream& os, std::uint8_t * current)  const;
+		void printIc(std::wostream& os, std::uint8_t const * current)  const;
 
-		std::uint8_t * jtab(int index) const;
+		std::uint8_t const * jtab(int index) const;
 
-		std::uint8_t * decode_implied(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_unsignedByte(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_big(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_intermediate(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_extended(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_word(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_wordBlock(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_stringConstant(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_packedConstant(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_jump(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_return(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_doubleByte(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_case(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_callStandardProc(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
-		std::uint8_t * decode_compare(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const;
+		std::uint8_t const * decode_implied(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_unsignedByte(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_big(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_intermediate(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_extended(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_word(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_wordBlock(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_stringConstant(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_packedConstant(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_jump(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_return(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_doubleByte(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_case(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_callStandardProc(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
+		std::uint8_t const * decode_compare(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
 
-		using decode_function_t = std::uint8_t* (PcodeProcedure::*)(std::wostream&, std::wstring&, std::uint8_t *) const;
+		using decode_function_t = std::uint8_t const * (PcodeProcedure::*)(std::wostream&, std::wstring&, std::uint8_t const *) const;
 
 		using dispatch_t = std::tuple<std::wstring, decode_function_t>;
 
 		static std::vector<dispatch_t> dispatch;
 
 	private:
-		RawPcodeAttributeTable * rawAttributeTable;
+		RawPcodeAttributeTable const * rawAttributeTable;
 	};
 
 	class PcodeSegment : public CodeSegment {
 	public:
 		using base = CodeSegment;
 
-		PcodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength);
+		PcodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
 
 		void disassemble(std::wostream& os) const override;
 

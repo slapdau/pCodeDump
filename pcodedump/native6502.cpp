@@ -32,13 +32,13 @@ namespace pcodedump {
 
 	/* Format a sequence of bytes as a string of space separated 2-digit hex values. */
 	namespace {
-		wstring toHexString(uint8_t *begin, uint8_t *end) {
+		wstring toHexString(uint8_t const * begin, uint8_t const * end) {
 			wostringstream buff;
 			buff << hex << uppercase << setfill(L'0') << right;
 			if (begin != end) {
 				buff << setw(2) << *begin;
 			}
-			for (uint8_t *current = begin + 1; current != end; ++current) {
+			for (auto current = begin + 1; current != end; ++current) {
 				buff << L" " << setw(2) << *current;
 			}
 			return buff.str();
@@ -47,10 +47,10 @@ namespace pcodedump {
 	}
 
 	/* Read one of the 4 6502 procedure relocation tables. Return a pointer to the start of the table. */
-	uint8_t * Native6502Procedure::readRelocations(Relocations &table, uint8_t * rawTable) {
-		uint8_t * current = rawTable;
+	uint8_t const * Native6502Procedure::readRelocations(Relocations &table, uint8_t const * rawTable) {
+		auto current = rawTable;
 		current -= sizeof(little_uint16_t);
-		int total = *reinterpret_cast<little_uint16_t *>(current);
+		int total = *reinterpret_cast<little_uint16_t const *>(current);
 		for (int count = 0; count != total; ++count) {
 			current -= sizeof(little_uint16_t);
 			table.push_back(derefSelfPtr(current));
@@ -97,10 +97,10 @@ namespace pcodedump {
 		return result.str();
 	}
 
-	Native6502Procedure::Native6502Procedure(Native6502Segment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength) :
+	Native6502Procedure::Native6502Procedure(Native6502Segment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength) :
 		base(segment, procedureNumber, procBegin, procLength),
 		segment{ segment },
-		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable *>(procBegin + procLength - sizeof(RawNative6502AttributeTable)) }
+		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable const *>(procBegin + procLength - sizeof(RawNative6502AttributeTable)) }
 	{
 		this->procEnd = procBegin + procLength - sizeof(RawNative6502AttributeTable);
 		for (auto table : { &baseRelocations, &segRelocations, &procRelocations, &interpRelocations }) {
@@ -429,15 +429,15 @@ namespace pcodedump {
 		}
 	}
 
-	void Native6502Procedure::writeHeader(std::uint8_t * segBegin, std::wostream & os) const {
+	void Native6502Procedure::writeHeader(std::uint8_t const * segBegin, std::wostream & os) const {
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
 		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ") Native (6502)  ";
 		os << endl;
 	}
 
 	/* Write a disassembly of the procedure to an output stream. */
-	void Native6502Procedure::disassemble(std::uint8_t * segBegin, std::wostream & os) const {
-		uint8_t * ic = procBegin;
+	void Native6502Procedure::disassemble(std::uint8_t const * segBegin, std::wostream & os) const {
+		uint8_t const * ic = procBegin;
 		os << uppercase;
 		while (ic && ic < procEnd) {
 			auto[opcode, decode_function] = dispatch[*ic];
@@ -445,12 +445,12 @@ namespace pcodedump {
 		}
 	}
 
-	std::uint8_t * Native6502Procedure::getEnterIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t *>(&rawAttributeTable->enterIc));
+	std::uint8_t const * Native6502Procedure::getEnterIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&rawAttributeTable->enterIc));
 	}
 
 	/* Write the instruction address, relative to the segment start.  Indicate the procedure entry point. */
-	void Native6502Procedure::printIc(std::wostream & os, std::uint8_t * current) const {
+	void Native6502Procedure::printIc(std::wostream & os, std::uint8_t const * current) const {
 		if (getEnterIc() == current) {
 			os << L"  ENTER:" << endl;
 		}
@@ -458,120 +458,120 @@ namespace pcodedump {
 		os << hex << setfill(L'0') << right << setw(4) <<  current - this->getProcBegin() << L": ";
 	}
 
-	std::uint8_t * Native6502Procedure::decode_implied(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_implied(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 1);
 		os << opCode << endl;
 		return current + 1;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_immedidate(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_immedidate(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" #$" << hex << setfill(L'0') << right << setw(2) << *value << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_accumulator(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_accumulator(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 1);
 		os << opCode << L" A" << endl;
 		return current + 1;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_absolute(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_absolute(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
 		os << opCode << L" " << formatAbsoluteAddress(current + 1) << endl;
 		return current + 3;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_absoluteindirect(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_absoluteindirect(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
 		os << opCode << L" (" << formatAbsoluteAddress(current + 1) << L")" << endl;
 		return current + 3;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_absoluteindirectindexed(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_absoluteindirectindexed(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
 		os << opCode << L" (" << formatAbsoluteAddress(current + 1) << L",X)" << endl;
 		return current + 3;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_zeropage(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_zeropage(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_zeropageindirect(std::wostream& os, std::wstring &opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_zeropageindirect(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L")" << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_absoluteindexedx(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_absoluteindexedx(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
 		os << opCode << L" " << formatAbsoluteAddress(current + 1) << L",X" << endl;
 		return current + 3;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_absoluteindexedy(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_absoluteindexedy(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
 		os << opCode << L" " << formatAbsoluteAddress(current + 1) << L",Y" << endl;
 		return current + 3;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_zeropageindexedx(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_zeropageindexedx(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << L",X" << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_zeropageindexedy(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_zeropageindexedy(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << L",Y" << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_relative(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_relative(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_int8_t *>(current + 1);
+		auto value = reinterpret_cast<little_int8_t const *>(current + 1);
 		os << opCode << L" $" << hex << setfill(L'0') << right << setw(4) << distance(getProcBegin(), current + 2 + *value) << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_indexedindirect(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_indexedindirect(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L",X)" << endl;
 		return current + 2;
 	}
 
-	std::uint8_t * Native6502Procedure::decode_indirectindexed(std::wostream & os, std::wstring & opCode, std::uint8_t * current) const {
+	std::uint8_t const * Native6502Procedure::decode_indirectindexed(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t *>(current + 1);
+		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L"),Y" << endl;
 		return current + 2;
 	}
 
-	Native6502Segment::Native6502Segment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength) :
+	Native6502Segment::Native6502Segment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
 		base(directoryEntry, segBegin, segLength)
 	{
 		entries = initProcedures();

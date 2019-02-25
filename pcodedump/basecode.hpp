@@ -29,12 +29,12 @@ namespace pcodedump {
 
 	class Procedure {
 	public:
-		Procedure(CodeSegment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength) :
+		Procedure(CodeSegment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength) :
 			segment{ segment }, procedureNumber{ procedureNumber }, procBegin{ procBegin }, procLength{ procLength }
 		{}
 
-		virtual void writeHeader(std::uint8_t* segBegin, std::wostream& os) const = 0;
-		virtual void disassemble(std::uint8_t* segBegin, std::wostream& os) const = 0;
+		virtual void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const = 0;
+		virtual void disassemble(std::uint8_t const * segBegin, std::wostream& os) const = 0;
 
 		virtual ~Procedure() {}
 		
@@ -42,7 +42,7 @@ namespace pcodedump {
 			return procedureNumber;
 		}
 
-		std::uint8_t * getProcBegin() const {
+		std::uint8_t const * getProcBegin() const {
 			return procBegin;
 		}
 
@@ -51,10 +51,10 @@ namespace pcodedump {
 		}
 
 	protected:
-		CodeSegment & segment;
-		int procedureNumber;
-		std::uint8_t * procBegin;
-		int procLength;
+		CodeSegment const & segment;
+		int const procedureNumber;
+		std::uint8_t const * const procBegin;
+		int const procLength;
 	};
 
 	using Procedures = std::vector<std::shared_ptr<Procedure>>;
@@ -72,7 +72,7 @@ namespace pcodedump {
 		CodeSegment(const CodeSegment &) = delete;
 		CodeSegment(const CodeSegment &&) = delete;
 
-		CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength);
+		CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
 
 		virtual ~CodeSegment() = 0;
 
@@ -84,7 +84,7 @@ namespace pcodedump {
 			return header->numProcedures;
 		}
 
-		uint8_t * begin() const {
+		uint8_t const * begin() const {
 			return segBegin;
 		}
 
@@ -94,17 +94,17 @@ namespace pcodedump {
 
 
 	protected:
-		using ProcRange = std::tuple<int, std::uint8_t *, int>; // Procedure number, start, length
+		using ProcRange = std::tuple<int, std::uint8_t const *, int>; // Procedure number, start, length
 		std::vector<ProcRange> getProcRanges();
 		virtual std::unique_ptr<Procedures> initProcedures() = 0;
 
 
 	protected:
-		std::uint8_t * segBegin;
+		std::uint8_t const * segBegin;
 		int segLength;
 
 	private:
-		RawProcedureDirectoryHead * header;
+		RawProcedureDirectoryHead const * header;
 
 	protected:
 		std::unique_ptr<Procedures> entries;

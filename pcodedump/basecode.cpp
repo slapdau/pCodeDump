@@ -24,9 +24,9 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength) :
+	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
 		segBegin{ segBegin }, segLength{ segLength },
-		header{ reinterpret_cast<RawProcedureDirectoryHead *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) }
+		header{ reinterpret_cast<RawProcedureDirectoryHead const *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) }
 	{}
 
 	CodeSegment::~CodeSegment() {}
@@ -40,9 +40,8 @@ namespace pcodedump {
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information. */
 	vector<CodeSegment::ProcRange> CodeSegment::getProcRanges() {
-
-		auto procPtrs = reinterpret_cast<little_int16_t *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) - 1;
-		vector<tuple<int, uint8_t *>> procEnd;
+		auto procPtrs = reinterpret_cast<little_int16_t const *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) - 1;
+		vector<tuple<int, uint8_t const *>> procEnd;
 		for (int index = 0; index != header->numProcedures; ++index) {
 			procEnd.emplace_back(make_tuple(index, derefSelfPtr(procPtrs - index) + sizeof(little_int16_t)));
 		}
@@ -52,14 +51,16 @@ namespace pcodedump {
 
 		vector<ProcRange> procRange;
 		auto currentStart = segBegin;
-		transform(std::begin(procEnd), std::end(procEnd), back_inserter(procRange), [&currentStart, this](const auto & value) {
-			auto [procNumber, end] = value;
+		transform(std::begin(procEnd), std::end(procEnd), back_inserter(procRange), [&currentStart, this](const tuple<int, uint8_t const *> & value) {
+			auto[procNumber, end] = value;
 			auto result = make_tuple(procNumber, currentStart, static_cast<int>(end - currentStart));
 			currentStart = end;
 			return result;
 		});
+
 		// Sort by procedure number ascending.  Restore order from disk file.
 		sort(std::begin(procRange), end(procRange), [](const auto & left, const auto & right) { return get<0>(left) < get<0>(right); });
+
 		return procRange;
 	}
 

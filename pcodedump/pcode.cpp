@@ -31,9 +31,9 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	PcodeProcedure::PcodeProcedure(CodeSegment & segment, int procedureNumber, std::uint8_t * procBegin, int procLength) :
+	PcodeProcedure::PcodeProcedure(CodeSegment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength) :
 		base(segment, procedureNumber, procBegin, procLength),
-		rawAttributeTable{ reinterpret_cast<RawPcodeAttributeTable *>(procBegin + procLength - sizeof(RawPcodeAttributeTable)) }
+		rawAttributeTable{ reinterpret_cast<RawPcodeAttributeTable const *>(procBegin + procLength - sizeof(RawPcodeAttributeTable)) }
 	{}
 
 	vector<PcodeProcedure::dispatch_t> PcodeProcedure::dispatch = {
@@ -296,19 +296,19 @@ namespace pcodedump {
 	};
 
 
-	std::uint8_t * PcodeProcedure::getEnterIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t *>(&rawAttributeTable->enterIc));
+	std::uint8_t const * PcodeProcedure::getEnterIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&rawAttributeTable->enterIc));
 	}
 
-	std::uint8_t * PcodeProcedure::getExitIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t *>(&rawAttributeTable->exitIc));
+	std::uint8_t const * PcodeProcedure::getExitIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&rawAttributeTable->exitIc));
 	}
 
-	uint8_t * PcodeProcedure::jtab(int index) const {
-		return reinterpret_cast<uint8_t *>(&rawAttributeTable->procedureNumber) + index;
+	uint8_t const * PcodeProcedure::jtab(int index) const {
+		return reinterpret_cast<uint8_t const *>(&rawAttributeTable->procedureNumber) + index;
 	}
 
-	void PcodeProcedure::writeHeader(uint8_t* segBegin, std::wostream& os) const {
+	void PcodeProcedure::writeHeader(uint8_t const * segBegin, std::wostream& os) const {
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
 		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ")  P-Code (LSB)   ";
 		os << setfill(L' ') << dec << left;
@@ -318,20 +318,19 @@ namespace pcodedump {
 		os << endl;
 	}
 
-	void PcodeProcedure::disassemble(uint8_t* segBegin, std::wostream& os) const {
+	void PcodeProcedure::disassemble(uint8_t const * segBegin, std::wostream& os) const {
 		if (!rawAttributeTable->procedureNumber) {
 			return;
 		}
-		uint8_t * ic = procBegin;
+		uint8_t const * ic = procBegin;
 		while (ic && ic < (procBegin + procLength)) {
-			wstring opcode;
-			decode_function_t decode_function;
-			tie(opcode, decode_function) = dispatch[*ic];
+			
+			auto[opcode, decode_function] = dispatch[*ic];
 			ic = (this->*decode_function)(os, opcode, ic);
 		}
 	}
 
-	void PcodeProcedure::printIc(std::wostream& os, uint8_t * current)  const {
+	void PcodeProcedure::printIc(std::wostream& os, uint8_t const * current)  const {
 		if (getEnterIc() == current) {
 			os << L"ENTER  :" << endl;
 		}
@@ -342,21 +341,21 @@ namespace pcodedump {
 		os << hex << setfill(L'0') << right << setw(4) << static_cast<int>(current - getProcBegin()) << L": ";
 	}
 
-	uint8_t * PcodeProcedure::decode_implied(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_implied(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current);
 		os << opCode << endl;
 		return current + 1;
 	}
 
 	/* ub */
-	uint8_t * PcodeProcedure::decode_unsignedByte(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_unsignedByte(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << *(current + 1) << endl;
 		return current + 2;
 	}
 
 	/* b */
-	uint8_t * PcodeProcedure::decode_big(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_big(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
 		int value = *current++;
 		if (value & 0x80) {
@@ -367,7 +366,7 @@ namespace pcodedump {
 	}
 
 	/* db, b */
-	uint8_t * PcodeProcedure::decode_intermediate(std::wostream& os, wstring &opCode, uint8_t * current) const {
+	uint8_t const * PcodeProcedure::decode_intermediate(std::wostream& os, wstring &opCode, uint8_t const * current) const {
 		printIc(os, current++);
 		int linkCount = *current++;
 		int offset = *current++;
@@ -379,7 +378,7 @@ namespace pcodedump {
 	}
 
 	/* ub, b */
-	uint8_t * PcodeProcedure::decode_extended(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_extended(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
 		int dataSegment = *current++;
 		int offset = *current++;
@@ -391,9 +390,9 @@ namespace pcodedump {
 	}
 
 	/* w */
-	uint8_t * PcodeProcedure::decode_word(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_word(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
-		little_int16_t * value = reinterpret_cast<little_int16_t *>(current);
+		little_int16_t const * value = reinterpret_cast<little_int16_t const *>(current);
 		current += sizeof(little_int16_t);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << *value << endl;
 		return current;
@@ -407,7 +406,7 @@ namespace pcodedump {
 	}
 
 	/* ub, word aligned block of words */
-	uint8_t * PcodeProcedure::decode_wordBlock(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_wordBlock(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
 		int total = *current;
 		if (reinterpret_cast<long long>(current) & 0x1) {
@@ -416,11 +415,11 @@ namespace pcodedump {
 		os << setfill(L' ') << left << setw(9) << opCode << dec << total;
 		if (total == 2) {
 			os << L"                    ; ";
-			convertToReal(os, reinterpret_cast<little_int16_t *>(current));
+			convertToReal(os, reinterpret_cast<little_int16_t const *>(current));
 		}
 		os << endl;
 		for (int count = 0; count != total; ++count) {
-			little_int16_t * value = reinterpret_cast<little_int16_t *>(current);
+			little_int16_t const * value = reinterpret_cast<little_int16_t const *>(current);
 			current += sizeof(little_int16_t);
 			os << setfill(L' ') << setw(18) << L"" << *value << endl;
 		}
@@ -428,14 +427,14 @@ namespace pcodedump {
 	}
 
 	/* ub, <chars> */
-	uint8_t * PcodeProcedure::decode_stringConstant(std::wostream& os, wstring &opCode, uint8_t * current) const {
+	uint8_t const * PcodeProcedure::decode_stringConstant(std::wostream& os, wstring &opCode, uint8_t const * current) const {
 		printIc(os, current++);
 		uint8_t count = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
-		uint8_t * finish = current + count;
+		uint8_t const * finish = current + count;
 		FmtSentry<wostream::char_type> sentry{ wcout };
 		while (current != finish) {
-			uint8_t * next = distance(current, finish) >= 80 ? current + 80 : finish;
+			uint8_t const * next = distance(current, finish) >= 80 ? current + 80 : finish;
 			wcout << L"                  ";
 			line_chardump(current, next);
 			current = next;
@@ -445,7 +444,7 @@ namespace pcodedump {
 	}
 
 	/* ub, <bytes> */
-	uint8_t * PcodeProcedure::decode_packedConstant(std::wostream& os, wstring &opCode, uint8_t * current) const {
+	uint8_t const * PcodeProcedure::decode_packedConstant(std::wostream& os, wstring &opCode, uint8_t const * current) const {
 		printIc(os, current++);
 		uint8_t count = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
@@ -455,7 +454,7 @@ namespace pcodedump {
 	}
 
 	/* sb */
-	uint8_t * PcodeProcedure::decode_jump(std::wostream& os, wstring &opCode, uint8_t * current) const {
+	uint8_t const * PcodeProcedure::decode_jump(std::wostream& os, wstring &opCode, uint8_t const * current) const {
 		printIc(os, current++);
 		auto offset = getNext<int8_t>(current);
 		intptr_t address;
@@ -469,14 +468,14 @@ namespace pcodedump {
 	}
 
 	/* db */
-	uint8_t * PcodeProcedure::decode_return(std::wostream& os, wstring &opCode, uint8_t * current) const {
+	uint8_t const * PcodeProcedure::decode_return(std::wostream& os, wstring &opCode, uint8_t const * current) const {
 		printIc(os, current++);
 		os << opCode << endl;
 		return nullptr;
 	}
 
 	/* ub, ub */
-	uint8_t * PcodeProcedure::decode_doubleByte(std::wostream& os, wstring &opCode, uint8_t * current) const {
+	uint8_t const * PcodeProcedure::decode_doubleByte(std::wostream& os, wstring &opCode, uint8_t const * current) const {
 		printIc(os, current++);
 		int value_1 = *current++;
 		int value_2 = *current++;
@@ -485,7 +484,7 @@ namespace pcodedump {
 	}
 
 	/* word aligned -> idx_min, idx_max, (uj sb), table */
-	uint8_t * PcodeProcedure::decode_case(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_case(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
 		if (reinterpret_cast<uintptr_t>(current) & 0x1) {
 			current++;
@@ -553,7 +552,7 @@ namespace pcodedump {
 	}
 
 	/* CSP ub */
-	uint8_t * PcodeProcedure::decode_callStandardProc(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_callStandardProc(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
 		int standardProcNumber = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << setw(6) << standardProcNumber;
@@ -565,7 +564,7 @@ namespace pcodedump {
 	}
 
 	/* 2-reals, 4-strings, 6-booleans, 8-sets, 10-byte arrays, 12-words. 10 and 12 have b as well */
-	uint8_t * PcodeProcedure::decode_compare(std::wostream& os, wstring &opCode, uint8_t * current)  const {
+	uint8_t const * PcodeProcedure::decode_compare(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
 		printIc(os, current++);
 		os << opCode << L" ";
 		switch (*current++) {
@@ -604,7 +603,7 @@ namespace pcodedump {
 		return current;
 	}
 
-	PcodeSegment::PcodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t * segBegin, int segLength) :
+	PcodeSegment::PcodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
 		base(directoryEntry, segBegin, segLength)
 	{
 		entries = this->initProcedures();
@@ -616,9 +615,7 @@ namespace pcodedump {
 		auto procRange = getProcRanges();
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) {
-			uint8_t * start;
-			int procNumber, length;
-			tie(procNumber, start, length) = value;
+			auto [procNumber, start, length] = value;
 			return make_shared<PcodeProcedure>(*this, procNumber + 1, start, length);
 		});
 		return result;

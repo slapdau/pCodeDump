@@ -29,13 +29,13 @@ namespace pcodedump {
 
 	using buff_t = std::vector<std::uint8_t>;
 
-	inline std::uint8_t * derefSelfPtr(void * selfPtr) {
-		return static_cast<std::uint8_t *>(selfPtr) - *reinterpret_cast<boost::endian::little_int16_t *>(selfPtr);
+	inline std::uint8_t const * derefSelfPtr(void const * selfPtr) {
+		return static_cast<std::uint8_t const *>(selfPtr) - *reinterpret_cast<boost::endian::little_int16_t const *>(selfPtr);
 	}
 
 	template <typename T>
-	T getNext(std::uint8_t * & address) {
-		T val = * reinterpret_cast<T *>(address);
+	T getNext(std::uint8_t const * & address) {
+		T val = * reinterpret_cast<T const *>(address);
 		address += sizeof(T);
 		return val;
 	}

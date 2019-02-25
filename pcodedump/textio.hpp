@@ -41,11 +41,11 @@ namespace pcodedump {
 		ios_t &stream;
 	};
 
-	void line_hexdump(std::uint8_t * start, std::uint8_t * finish);
+	void line_hexdump(std::uint8_t const * start, std::uint8_t const * finish);
 
-	void line_chardump(std::uint8_t * start, std::uint8_t * finish);
+	void line_chardump(std::uint8_t const * start, std::uint8_t const * finish);
 
-	void hexdump(std::wstring leader, std::uint8_t * start, std::uint8_t * finish);
+	void hexdump(std::wstring leader, std::uint8_t const * start, std::uint8_t const * finish);
 
 	void line_hexdump(buff_t::iterator start, buff_t::iterator finish);
 

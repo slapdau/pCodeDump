@@ -24,8 +24,8 @@ using namespace std;
 namespace pcodedump {
 
 	void
-		line_hexdump(uint8_t * start, uint8_t * finish) {
-		for (uint8_t * current = start; current != finish; ++current) {
+		line_hexdump(uint8_t const  * start, uint8_t const * finish) {
+		for (auto current = start; current != finish; ++current) {
 			wcout << L" " << setw(2) << *current;
 		}
 		for (int count = 0; count < 16 - distance(start, finish); ++count) {
@@ -34,8 +34,8 @@ namespace pcodedump {
 	}
 
 	void
-		line_chardump(uint8_t * start, uint8_t * finish) {
-		for (uint8_t * current = start; current != finish; ++current) {
+		line_chardump(uint8_t const * start, uint8_t const * finish) {
+		for (auto current = start; current != finish; ++current) {
 			if (32 <= *current && *current <= 0x7e) {
 				wcout << char(*current);
 			} else {
@@ -45,13 +45,13 @@ namespace pcodedump {
 	}
 
 	void
-		hexdump(std::wstring leader, uint8_t * start, uint8_t * finish) {
+		hexdump(std::wstring leader, uint8_t const * start, uint8_t const * finish) {
 		FmtSentry<wostream::char_type> sentry{ wcout };
 		wcout << hex << nouppercase << right << setfill(L'0');
 		unsigned int address = 0;
-		uint8_t * current = start;
+		uint8_t const * current = start;
 		while (current != finish) {
-			uint8_t * next = distance(current, finish) >= 16 ? current + 16 : finish;
+			uint8_t const * next = distance(current, finish) >= 16 ? current + 16 : finish;
 			wcout << leader << setw(4) << address << L":";
 			line_hexdump(current, next);
 			wcout << L"    ";
