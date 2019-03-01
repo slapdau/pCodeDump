@@ -85,7 +85,7 @@ namespace pcodedump {
 		machineType{ static_cast<MachineType>(int{ rawDict->segInfo[index] } >> 8 & 0xf) },
 		version{ int{ rawDict->segInfo[index] } >> 13 & 0x7 },
 		codeSegment{ createCodeSegment() },
-		textSegment{ createTextSegment() },
+		interfaceText{ createInterfaceText() },
 		linkageSegment{ createLinkageSegment() }
 	{
 	}
@@ -102,11 +102,11 @@ namespace pcodedump {
 	}
 
 	/* Create a new interface text segment if this directry entry points to one. */
-	unique_ptr<TextSegment> SegmentDirectoryEntry::createTextSegment() {
+	unique_ptr<InterfaceText> SegmentDirectoryEntry::createInterfaceText() {
 		if (this->textBlock) {
-			return make_unique<TextSegment>(*this, buffer.data() + textBlock * BLOCK_SIZE);
+			return make_unique<InterfaceText>(*this, buffer.data() + textBlock * BLOCK_SIZE);
 		} else {
-			return unique_ptr<TextSegment>(nullptr);
+			return unique_ptr<InterfaceText>(nullptr);
 		}
 	}
 
@@ -171,8 +171,8 @@ namespace pcodedump {
 	std::wostream& operator<<(std::wostream& os, const SegmentDirectoryEntry& value) {
 		value.writeHeader(os);
 		os << endl;
-		if (showText && value.textSegment.get() != nullptr) {
-			value.textSegment->write(os);
+		if (showText && value.interfaceText.get() != nullptr) {
+			value.interfaceText->write(os);
 			os << endl;
 		}
 		if (listProcs && value.codeSegment.get() != nullptr) {

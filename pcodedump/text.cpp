@@ -23,7 +23,7 @@ using namespace std;
 
 namespace pcodedump {
 
-	TextSegment::TextSegment(SegmentDirectoryEntry & directoryEntry, const uint8_t * text) :
+	InterfaceText::InterfaceText(SegmentDirectoryEntry & directoryEntry, const uint8_t * text) :
 		directoryEntry{ directoryEntry }, text{ text }
 	{
 	}
@@ -62,7 +62,7 @@ namespace pcodedump {
 
 	}
 
-	void TextSegment::write(std::wostream& os) const {
+	void InterfaceText::write(std::wostream& os) const {
 		auto current = text;
 		while (current) {
 			wstring line;

@@ -71,7 +71,7 @@ namespace pcodedump {
 	};
 
 	class CodeSegment;
-	class TextSegment;
+	class InterfaceText;
 	class LinkageSegment;
 
 	class SegmentDirectoryEntry {
@@ -102,7 +102,7 @@ namespace pcodedump {
 		}
 
 		std::unique_ptr<CodeSegment> createCodeSegment();
-		std::unique_ptr<TextSegment> createTextSegment();
+		std::unique_ptr<InterfaceText> createInterfaceText();
 		std::unique_ptr<LinkageSegment> createLinkageSegment();
 
 	protected:
@@ -117,7 +117,7 @@ namespace pcodedump {
 		MachineType machineType;
 		int version;
 		std::unique_ptr<CodeSegment> codeSegment;
-		std::unique_ptr<TextSegment> textSegment;
+		std::unique_ptr<InterfaceText> interfaceText;
 		std::unique_ptr<LinkageSegment> linkageSegment;
 	};
 

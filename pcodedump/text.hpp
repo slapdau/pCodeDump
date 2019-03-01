@@ -24,9 +24,9 @@ namespace pcodedump {
 
 	class SegmentDirectoryEntry;
 
-	class TextSegment {
+	class InterfaceText {
 	public:
-		TextSegment(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * text);
+		InterfaceText(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * text);
 		void write(std::wostream& os) const;
 	private:
 		SegmentDirectoryEntry const & directoryEntry;
