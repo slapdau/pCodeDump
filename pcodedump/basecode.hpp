@@ -73,10 +73,6 @@ namespace pcodedump {
 
 		virtual ~CodeSegment() = 0;
 
-		int getSegmentNumber() const;
-
-		int getNumProcedures() const;
-
 		uint8_t const * begin() const {
 			return segBegin;
 		}

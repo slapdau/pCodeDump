@@ -61,14 +61,6 @@ namespace pcodedump {
 
 	CodeSegment::~CodeSegment() {}
 
-	inline int CodeSegment::getSegmentNumber() const {
-		return procDict.segmentNumber;
-	}
-
-	inline int CodeSegment::getNumProcedures() const {
-		return procDict.numProcedures;
-	}
-
 	/* Gets a vector of the procedure ranges in this code segment.  The tuples are
 		- procedure number
 		- Pointer to start
@@ -105,7 +97,7 @@ namespace pcodedump {
 
 
 	void CodeSegment::writeHeader(std::wostream& os) const {
-		os << L"    Procedures : " << getNumProcedures() << endl;
+		os << L"    Procedures : " << procDict.numProcedures << endl;
 	}
 
 }
