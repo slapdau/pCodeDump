@@ -598,12 +598,12 @@ namespace pcodedump {
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure> {
 			auto[procNumber, range] = value;
-			auto[start, length] = range;
+			auto length = static_cast<int>(range.end() - range.begin());
 			// If the procedure number is recorded as 0, then it's a native procedure.
-			if (*(start + static_cast<int>(length) - 2)) {
-				return make_shared<PcodeProcedure>(*this, procNumber + 1, start, static_cast<int>(length));
+			if (*(range.begin() + static_cast<int>(length) - 2)) {
+				return make_shared<PcodeProcedure>(*this, procNumber + 1, range.begin(), length);
 			} else {
-				return make_shared<Native6502Procedure>(*this, procNumber + 1, start, static_cast<int>(length));
+				return make_shared<Native6502Procedure>(*this, procNumber + 1, range.begin(), length);
 			}
 		});
 		return result;

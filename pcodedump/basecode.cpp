@@ -69,17 +69,17 @@ namespace pcodedump {
 	   memory this works well for the P-machine, but for disassembling the procedures
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information. */
-	map<int, tuple<uint8_t const *, intptr_t>> CodeSegment::getProcRanges() {
+	map<int, Range<uint8_t const>> CodeSegment::getProcRanges() {
 		map<uint8_t const *, int> procEnds;
 		for (int index = 0; index != procDict.numProcedures; ++index) {
 			procEnds[procDict[index]] = index;
 		}
 
 		auto currentStart = begin();
-		map<int, tuple<uint8_t const *, intptr_t>> procRanges;
+		map<int, Range<std::uint8_t const>> procRanges;
 		for (auto procEnd : procEnds) {
 			auto[end, procNumber] = procEnd;
-			procRanges[procNumber] = make_tuple(currentStart, end - currentStart);
+			procRanges[procNumber] = Range(currentStart, end);
 			currentStart = end;
 		}
 

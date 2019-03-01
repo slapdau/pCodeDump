@@ -85,7 +85,7 @@ namespace pcodedump {
 
 	protected:
 		using ProcRange = std::tuple<int, std::uint8_t const *, int>; // Procedure number, start, length
-		std::map<int, std::tuple<std::uint8_t const *, std::intptr_t>> getProcRanges();
+		std::map<int, Range<std::uint8_t const>> getProcRanges();
 		virtual std::unique_ptr<Procedures> initProcedures() = 0;
 
 

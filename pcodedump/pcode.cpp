@@ -612,12 +612,12 @@ namespace pcodedump {
 	/* Get the procedure code memory ranges and construct a vector of procedure objedts. P-code segments only
 	   have p-code procedures. */
 	unique_ptr<Procedures> PcodeSegment::initProcedures() {
-		auto procRange = getProcRanges();
+		auto procRanges = getProcRanges();
 		auto result = make_unique<Procedures>();
-		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) {
-			auto [procNumber, range] = value;
-			auto[start, length] = range;
-			return make_shared<PcodeProcedure>(*this, procNumber + 1, start, static_cast<int>(length));
+		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) {
+			auto[procNumber, range] = value;
+			auto length = static_cast<int>(range.end() - range.begin());
+			return make_shared<PcodeProcedure>(*this, procNumber + 1, range.begin(), length);
 		});
 		return result;
 	}
