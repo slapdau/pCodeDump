@@ -27,13 +27,13 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	LinkageSegment::LinkageSegment(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * linkage) :
+	LinkageInfo::LinkageInfo(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * linkage) :
 		directoryEntry{ directoryEntry }, linkage{ linkage }
 	{
 	}
 
 	/* Write out linkage records. */
-	void LinkageSegment::write(std::wostream & os) const
+	void LinkageInfo::write(std::wostream & os) const
 	{
 		uint8_t const * current = linkage;
 		os << L"Linkage records:" << endl;
@@ -70,7 +70,7 @@ namespace pcodedump {
 
 	/* Write out a list of address references back into the procedure code and return the next
 	   address beyond the array storage. */
-	uint8_t const * LinkageSegment::decode_referenceArray(wostream & os, uint8_t const *current, int numberOfRefs) const {
+	uint8_t const * LinkageInfo::decode_referenceArray(wostream & os, uint8_t const *current, int numberOfRefs) const {
 		auto pointers = reinterpret_cast<little_int16_t const *>(current);
 		os << hex << setfill(L'0') << right;
 		for (int index = 0; index != numberOfRefs; ++index) {
@@ -86,43 +86,43 @@ namespace pcodedump {
 		return current + (numberOfRefs / 8 + 1) * 8 * sizeof(little_int16_t);
 	}
 
-	uint8_t const * LinkageSegment::decode_reference(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_reference(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		os << static_cast<OperandFormat>(static_cast<int>(parameters[0])) << endl;
 		return decode_referenceArray(os, current + sizeof(little_int16_t) * 3, parameters[1]);
 	}
 
-	uint8_t const * LinkageSegment::decode_privateReference(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_privateReference(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		os << static_cast<OperandFormat>(static_cast<int>(parameters[0])) << L" (" << parameters[2] << L" words)" << endl;
 		return decode_referenceArray(os, current + sizeof(little_int16_t) * 3, parameters[1]);
 	}
 
-	uint8_t const * LinkageSegment::decode_globalDefinition(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_globalDefinition(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		os << dec << L"#" << parameters[0] << L", IC=" << parameters[1] << endl;
 		return current + sizeof(little_int16_t) * 3;
 	}
 
-	uint8_t const * LinkageSegment::decode_publicDefinition(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_publicDefinition(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		os << dec << L"base = " << parameters[0] << endl;
 		return current + sizeof(little_int16_t) * 3;
 	}
 
-	uint8_t const * LinkageSegment::decode_constantDefinition(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_constantDefinition(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		os << dec << L"= " << parameters[0] << endl;
 		return current + sizeof(little_int16_t) * 3;
 	}
 
-	uint8_t const * LinkageSegment::decode_externalRoutine(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_externalRoutine(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		os << dec << L"#" << parameters[0] << " (" << parameters[1] << L" words)" << endl;
 		return current + sizeof(little_int16_t) * 3;
 	}
 
-	uint8_t const * LinkageSegment::decode_endOfFile(wostream & os, uint8_t const *current) const {
+	uint8_t const * LinkageInfo::decode_endOfFile(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
 		if (directoryEntry.getSegmentKind() != SegmentKind::seprtseg) {
 			os << dec << parameters[0] << " global words";
@@ -134,20 +134,20 @@ namespace pcodedump {
 		return nullptr;
 	}
 
-	map<LinkageType, tuple<wstring, LinkageSegment::decode_function_t>> LinkageSegment::linkageNames = {
-		{ LinkageType::eofMark,  make_tuple(L"end of linkage", &LinkageSegment::decode_endOfFile) },
-		{ LinkageType::unitRef,  make_tuple(L"unit reference", &LinkageSegment::decode_reference) },
-		{ LinkageType::globRef,  make_tuple(L"global reference", &LinkageSegment::decode_reference) },
-		{ LinkageType::publRef,  make_tuple(L"public reference", &LinkageSegment::decode_reference) },
-		{ LinkageType::privRef,  make_tuple(L"private reference", &LinkageSegment::decode_privateReference) },
-		{ LinkageType::constRef, make_tuple(L"constant reference", &LinkageSegment::decode_reference) },
-		{ LinkageType::globDef,  make_tuple(L"global definition", &LinkageSegment::decode_globalDefinition) },
-		{ LinkageType::publDef,  make_tuple(L"public definition", &LinkageSegment::decode_publicDefinition) },
-		{ LinkageType::constDef, make_tuple(L"constant value", &LinkageSegment::decode_constantDefinition) },
-		{ LinkageType::extProc,  make_tuple(L"external procedure", &LinkageSegment::decode_externalRoutine) },
-		{ LinkageType::extFunc,  make_tuple(L"external function", &LinkageSegment::decode_externalRoutine) },
-		{ LinkageType::sepProc,  make_tuple(L"separate procedure", &LinkageSegment::decode_externalRoutine) },
-		{ LinkageType::sepFunc,  make_tuple(L"separate function", &LinkageSegment::decode_externalRoutine) },
+	map<LinkageType, tuple<wstring, LinkageInfo::decode_function_t>> LinkageInfo::linkageNames = {
+		{ LinkageType::eofMark,  make_tuple(L"end of linkage", &LinkageInfo::decode_endOfFile) },
+		{ LinkageType::unitRef,  make_tuple(L"unit reference", &LinkageInfo::decode_reference) },
+		{ LinkageType::globRef,  make_tuple(L"global reference", &LinkageInfo::decode_reference) },
+		{ LinkageType::publRef,  make_tuple(L"public reference", &LinkageInfo::decode_reference) },
+		{ LinkageType::privRef,  make_tuple(L"private reference", &LinkageInfo::decode_privateReference) },
+		{ LinkageType::constRef, make_tuple(L"constant reference", &LinkageInfo::decode_reference) },
+		{ LinkageType::globDef,  make_tuple(L"global definition", &LinkageInfo::decode_globalDefinition) },
+		{ LinkageType::publDef,  make_tuple(L"public definition", &LinkageInfo::decode_publicDefinition) },
+		{ LinkageType::constDef, make_tuple(L"constant value", &LinkageInfo::decode_constantDefinition) },
+		{ LinkageType::extProc,  make_tuple(L"external procedure", &LinkageInfo::decode_externalRoutine) },
+		{ LinkageType::extFunc,  make_tuple(L"external function", &LinkageInfo::decode_externalRoutine) },
+		{ LinkageType::sepProc,  make_tuple(L"separate procedure", &LinkageInfo::decode_externalRoutine) },
+		{ LinkageType::sepFunc,  make_tuple(L"separate function", &LinkageInfo::decode_externalRoutine) },
 	};
 
 }

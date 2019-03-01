@@ -72,7 +72,7 @@ namespace pcodedump {
 
 	class CodeSegment;
 	class InterfaceText;
-	class LinkageSegment;
+	class LinkageInfo;
 
 	class SegmentDirectoryEntry {
 		friend std::wostream& operator<<(std::wostream&, const SegmentDirectoryEntry&);
@@ -103,7 +103,7 @@ namespace pcodedump {
 
 		std::unique_ptr<CodeSegment> createCodeSegment();
 		std::unique_ptr<InterfaceText> createInterfaceText();
-		std::unique_ptr<LinkageSegment> createLinkageSegment();
+		std::unique_ptr<LinkageInfo> createLinkageInfo();
 
 	protected:
 		buff_t const & buffer;
@@ -118,7 +118,7 @@ namespace pcodedump {
 		int version;
 		std::unique_ptr<CodeSegment> codeSegment;
 		std::unique_ptr<InterfaceText> interfaceText;
-		std::unique_ptr<LinkageSegment> linkageSegment;
+		std::unique_ptr<LinkageInfo> linkageInfo;
 	};
 
 	std::wostream& operator<<(std::wostream& os, const SegmentDirectoryEntry& value);

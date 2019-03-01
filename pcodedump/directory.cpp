@@ -86,7 +86,7 @@ namespace pcodedump {
 		version{ int{ rawDict->segInfo[index] } >> 13 & 0x7 },
 		codeSegment{ createCodeSegment() },
 		interfaceText{ createInterfaceText() },
-		linkageSegment{ createLinkageSegment() }
+		linkageInfo{ createLinkageInfo() }
 	{
 	}
 
@@ -129,13 +129,13 @@ namespace pcodedump {
 
 	/* Create a new linkage segment if this directory entry has unlinked code.
 	   The location of linkage data has to be inferred as the block following code data. */
-	unique_ptr<LinkageSegment> SegmentDirectoryEntry::createLinkageSegment()
+	unique_ptr<LinkageInfo> SegmentDirectoryEntry::createLinkageInfo()
 	{
 		if (hasLinkage(this->segmentKind)) {
 			assert(this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock));
-			return make_unique<LinkageSegment>(*this, this->buffer.data() + (this->codeBlock + this->codeLength / BLOCK_SIZE + 1) * BLOCK_SIZE);
+			return make_unique<LinkageInfo>(*this, this->buffer.data() + (this->codeBlock + this->codeLength / BLOCK_SIZE + 1) * BLOCK_SIZE);
 		} else {
-			return unique_ptr<LinkageSegment>(nullptr);
+			return unique_ptr<LinkageInfo>(nullptr);
 		}
 	}
 
@@ -179,8 +179,8 @@ namespace pcodedump {
 			value.codeSegment->disassemble(os);
 			os << endl;
 		}
-		if (showLinkage && value.linkageSegment.get() != nullptr) {
-			value.linkageSegment->write(os);
+		if (showLinkage && value.linkageInfo.get() != nullptr) {
+			value.linkageInfo->write(os);
 			os << endl;
 		}
 		return os;

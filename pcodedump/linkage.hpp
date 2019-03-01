@@ -27,14 +27,14 @@ namespace pcodedump {
 
 	enum class LinkageType { eofMark, unitRef, globRef, publRef, privRef, constRef, globDef, publDef, constDef, extProc, extFunc, sepProc, sepFunc, seppRef, sepfRef };
 
-	class LinkageSegment {
+	class LinkageInfo {
 	public:
-		LinkageSegment(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * linkage);
+		LinkageInfo(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * linkage);
 
 		void write(std::wostream& os) const;
 
 	private:
-		using decode_function_t = std::uint8_t const * (LinkageSegment::*)(std::wostream&, std::uint8_t const *) const;
+		using decode_function_t = std::uint8_t const * (LinkageInfo::*)(std::wostream&, std::uint8_t const *) const;
 		std::uint8_t const * decode_reference(std::wostream&, std::uint8_t const *) const;
 		std::uint8_t const * decode_privateReference(std::wostream&, std::uint8_t const *) const;
 		std::uint8_t const * decode_globalDefinition(std::wostream&, std::uint8_t const *) const;
