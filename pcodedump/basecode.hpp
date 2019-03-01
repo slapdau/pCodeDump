@@ -86,7 +86,7 @@ namespace pcodedump {
 	private:
 		Range<std::uint8_t const> data;
 		ProcedureDictionary const & procDict;
-		std::unique_ptr<Procedures> entries;
+		std::unique_ptr<Procedures> procedures;
 	};
 
 }

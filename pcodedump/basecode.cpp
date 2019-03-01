@@ -61,7 +61,7 @@ namespace pcodedump {
 	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
 		data{segBegin, segBegin+segLength }, procDict{ ProcedureDictionary::place(segBegin, segLength) }
 	{
-		entries = initProcedures();
+		procedures = initProcedures();
 	}
 
 	/* Gets a vector of the procedure ranges in this code segment.  The tuples are
@@ -90,8 +90,8 @@ namespace pcodedump {
 	}
 
 	Procedure * CodeSegment::findProcedure(std::uint8_t const * address) const {
-		auto result = find_if(cbegin(*entries), cend(*entries), [address](Procedures::value_type const & proc) {return proc->contains(address); });
-		if (result == cend(*entries)) {
+		auto result = find_if(cbegin(*procedures), cend(*procedures), [address](Procedures::value_type const & proc) {return proc->contains(address); });
+		if (result == cend(*procedures)) {
 			return nullptr;
 		} else {
 			return result->get();
@@ -120,14 +120,14 @@ namespace pcodedump {
 	}
 
 	void CodeSegment::disassemble(std::wostream& os) const {
-		Procedures procs{ *entries };
+		Procedures procedures{ *(this->procedures) };
 		if (addressOrder) {
-			sort(std::begin(procs), std::end(procs), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
+			sort(std::begin(procedures), std::end(procedures), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
 		}
-		for (auto & entry : procs) {
-			entry->writeHeader(begin(), os);
+		for (auto & procedure : procedures) {
+			procedure->writeHeader(begin(), os);
 			if (disasmProcs) {
-				entry->disassemble(begin(), os);
+				procedure->disassemble(begin(), os);
 				os << endl;
 			}
 		}
