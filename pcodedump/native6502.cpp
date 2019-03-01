@@ -583,9 +583,9 @@ namespace pcodedump {
 			sort(std::begin(procs), std::end(procs), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
 		}
 		for (auto & entry : procs) {
-			entry->writeHeader(segBegin, os);
+			entry->writeHeader(begin(), os);
 			if (disasmProcs) {
-				entry->disassemble(segBegin, os);
+				entry->disassemble(begin(), os);
 				os << endl;
 			}
 		}

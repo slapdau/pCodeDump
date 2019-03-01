@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <boost/endian/arithmetic.hpp>
+#include "types.hpp"
 
 namespace pcodedump {
 
@@ -74,7 +75,7 @@ namespace pcodedump {
 		virtual ~CodeSegment() = 0;
 
 		uint8_t const * begin() const {
-			return segBegin;
+			return data.begin();
 		}
 
 		virtual void writeHeader(std::wostream& os) const;
@@ -89,8 +90,7 @@ namespace pcodedump {
 
 
 	protected:
-		std::uint8_t const * segBegin;
-		int segLength;
+		Range<std::uint8_t const> data;
 
 	private:
 		ProcedureDictionary const & procDict;

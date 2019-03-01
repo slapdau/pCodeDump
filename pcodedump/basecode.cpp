@@ -56,7 +56,7 @@ namespace pcodedump {
 	}
 
 	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
-		segBegin{ segBegin }, segLength{ segLength }, procDict{ ProcedureDictionary::place(segBegin, segLength) }
+		data{segBegin, segBegin+segLength }, procDict{ ProcedureDictionary::place(segBegin, segLength) }
 	{}
 
 	CodeSegment::~CodeSegment() {}
@@ -75,7 +75,7 @@ namespace pcodedump {
 			procEnds[procDict[index]] = index;
 		}
 
-		auto currentStart = segBegin;
+		auto currentStart = begin();
 		map<int, tuple<uint8_t const *, intptr_t>> procRanges;
 		for (auto procEnd : procEnds) {
 			auto[end, procNumber] = procEnd;
