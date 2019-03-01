@@ -97,7 +97,7 @@ namespace pcodedump {
 		return result.str();
 	}
 
-	Native6502Procedure::Native6502Procedure(Native6502Segment & segment, int procedureNumber, Range<std::uint8_t const> data) :
+	Native6502Procedure::Native6502Procedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> data) :
 		base(segment, procedureNumber, data),
 		segment{ segment },
 		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable const *>(data.end() - sizeof(RawNative6502AttributeTable)) }
@@ -571,43 +571,6 @@ namespace pcodedump {
 		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
 		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L"),Y" << endl;
 		return current + 2;
-	}
-
-	Native6502Segment::Native6502Segment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
-		base(directoryEntry, segBegin, segLength)
-	{
-		entries = initProcedures();
-	}
-
-	void Native6502Segment::disassemble(std::wostream & os) const {
-		Procedures procs{ *entries };
-		if (addressOrder) {
-			sort(std::begin(procs), std::end(procs), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
-		}
-		for (auto & entry : procs) {
-			entry->writeHeader(begin(), os);
-			if (disasmProcs) {
-				entry->disassemble(begin(), os);
-				os << endl;
-			}
-		}
-	}
-
-	/* Get the memory ranges for procedures in this segment and construct a suitable Procedure object
-	   for each.  Native code segments can contain both p-code and native code. */
-	std::unique_ptr<Procedures> Native6502Segment::initProcedures() {
-		auto procRange = getProcRanges();
-		auto result = make_unique<Procedures>();
-		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure> {
-			auto[procNumber, range] = value;
-			// If the procedure number is recorded as 0, then it's a native procedure.
-			if (*(range.end() - 2)) {
-				return make_shared<PcodeProcedure>(*this, procNumber + 1, range);
-			} else {
-				return make_shared<Native6502Procedure>(*this, procNumber + 1, range);
-			}
-		});
-		return result;
 	}
 
 }

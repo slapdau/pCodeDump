@@ -40,7 +40,7 @@ namespace pcodedump {
 		};
 	public:
 		using base = Procedure;
-		Native6502Procedure(Native6502Segment & segment, int procedureNumber, Range<std::uint8_t const> range);
+		Native6502Procedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> range);
 
 		static void initialiseCpu();
 
@@ -48,7 +48,7 @@ namespace pcodedump {
 		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;
 
 	private:
-		Native6502Segment & segment;
+		CodeSegment & segment;
 
 		using Relocations = std::vector<std::uint8_t const *>;
 
@@ -88,19 +88,6 @@ namespace pcodedump {
 		Relocations segRelocations;
 		Relocations procRelocations;
 		Relocations interpRelocations;
-	};
-
-	class Native6502Segment : public CodeSegment {
-
-	public:
-		using base = CodeSegment;
-		Native6502Segment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
-
-		void disassemble(std::wostream& os) const override;
-
-	protected:
-		std::unique_ptr<Procedures> initProcedures() override;
-
 	};
 
 }

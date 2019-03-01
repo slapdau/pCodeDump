@@ -93,9 +93,9 @@ namespace pcodedump {
 	/* Create a new correctly subtyped code segment object if this directory entry has code (everything except data segments). */
 	unique_ptr<CodeSegment> SegmentDirectoryEntry::createCodeSegment() {
 		if (hasPcode()) {
-			return make_unique<PcodeSegment>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
+			return make_unique<CodeSegment>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
 		} else if (has6502code()) {
-			return make_unique<Native6502Segment>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
+			return make_unique<CodeSegment>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
 		} else {
 			return unique_ptr<CodeSegment>(nullptr);
 		}

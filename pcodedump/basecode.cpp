@@ -15,10 +15,13 @@
 */
 
 #include "basecode.hpp"
+#include "pcode.hpp"
+#include "native6502.hpp"
 #include "types.hpp"
 #include "directory.hpp"
 #include <iterator>
 #include <cstddef>
+#include "options.hpp"
 
 using namespace std;
 using namespace boost::endian;
@@ -57,9 +60,9 @@ namespace pcodedump {
 
 	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
 		data{segBegin, segBegin+segLength }, procDict{ ProcedureDictionary::place(segBegin, segLength) }
-	{}
-
-	CodeSegment::~CodeSegment() {}
+	{
+		entries = initProcedures();
+	}
 
 	/* Gets a vector of the procedure ranges in this code segment.  The tuples are
 		- procedure number
@@ -98,6 +101,36 @@ namespace pcodedump {
 
 	void CodeSegment::writeHeader(std::wostream& os) const {
 		os << L"    Procedures : " << procDict.numProcedures << endl;
+	}
+
+	/* Get the procedure code memory ranges and construct a vector of procedure objedts. P-code segments only
+	   have p-code procedures. */
+	unique_ptr<Procedures> CodeSegment::initProcedures() {
+		auto procRanges = getProcRanges();
+		auto result = make_unique<Procedures>();
+		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure> {
+			auto[procNumber, range] = value;
+			if (*(range.end() - 2)) {
+				return make_shared<PcodeProcedure>(*this, procNumber + 1, range);
+			} else {
+				return make_shared<Native6502Procedure>(*this, procNumber + 1, range);
+			}
+		});
+		return result;
+	}
+
+	void CodeSegment::disassemble(std::wostream& os) const {
+		Procedures procs{ *entries };
+		if (addressOrder) {
+			sort(std::begin(procs), std::end(procs), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
+		}
+		for (auto & entry : procs) {
+			entry->writeHeader(begin(), os);
+			if (disasmProcs) {
+				entry->disassemble(begin(), os);
+				os << endl;
+			}
+		}
 	}
 
 }

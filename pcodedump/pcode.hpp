@@ -86,19 +86,6 @@ namespace pcodedump {
 		RawPcodeAttributeTable const * rawAttributeTable;
 	};
 
-	class PcodeSegment : public CodeSegment {
-	public:
-		using base = CodeSegment;
-
-		PcodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
-
-		void disassemble(std::wostream& os) const override;
-
-	protected:
-		std::unique_ptr<Procedures> initProcedures() override;
-
-	};
-
 }
 
 

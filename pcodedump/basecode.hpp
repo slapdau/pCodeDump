@@ -62,7 +62,7 @@ namespace pcodedump {
 	class SegmentDirectoryEntry;
 	class ProcedureDictionary;
 
-	class CodeSegment {
+	class CodeSegment final {
 	public:
 		CodeSegment() = delete;
 		CodeSegment(const CodeSegment &) = delete;
@@ -70,29 +70,22 @@ namespace pcodedump {
 
 		CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
 
-		virtual ~CodeSegment() = 0;
-
 		uint8_t const * begin() const {
 			return data.begin();
 		}
 
-		virtual void writeHeader(std::wostream& os) const;
-		virtual void disassemble(std::wostream& os) const = 0;
+		void writeHeader(std::wostream& os) const;
+		void disassemble(std::wostream& os) const;
 		Procedure * findProcedure(std::uint8_t const * address) const;
 
 
-	protected:
+	private:
 		std::map<int, Range<std::uint8_t const>> getProcRanges();
-		virtual std::unique_ptr<Procedures> initProcedures() = 0;
-
-
-	protected:
-		Range<std::uint8_t const> data;
+		std::unique_ptr<Procedures> initProcedures();
 
 	private:
+		Range<std::uint8_t const> data;
 		ProcedureDictionary const & procDict;
-
-	protected:
 		std::unique_ptr<Procedures> entries;
 	};
 
