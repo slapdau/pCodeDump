@@ -19,6 +19,7 @@
 
 #include "basecode.hpp"
 #include "directory.hpp"
+#include "types.hpp"
 #include <iostream>
 #include <string>
 #include <map>
@@ -46,7 +47,7 @@ namespace pcodedump {
 
 	public:
 		using base = Procedure;
-		PcodeProcedure(CodeSegment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength);
+		PcodeProcedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> range);
 
 		void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const;
 		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;

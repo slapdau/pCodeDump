@@ -18,6 +18,7 @@
 #define _2DBE5D93_13B5_4D23_AB77_1150B342D655
 
 #include "basecode.hpp"
+#include "types.hpp"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -39,7 +40,7 @@ namespace pcodedump {
 		};
 	public:
 		using base = Procedure;
-		Native6502Procedure(Native6502Segment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength);
+		Native6502Procedure(Native6502Segment & segment, int procedureNumber, Range<std::uint8_t const> range);
 
 		static void initialiseCpu();
 

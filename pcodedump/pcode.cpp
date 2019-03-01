@@ -31,9 +31,9 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	PcodeProcedure::PcodeProcedure(CodeSegment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength) :
-		base(segment, procedureNumber, procBegin, procLength),
-		rawAttributeTable{ reinterpret_cast<RawPcodeAttributeTable const *>(procBegin + procLength - sizeof(RawPcodeAttributeTable)) }
+	PcodeProcedure::PcodeProcedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> range) :
+		base(segment, procedureNumber, range),
+		rawAttributeTable{ reinterpret_cast<RawPcodeAttributeTable const *>(data.end() - sizeof(RawPcodeAttributeTable)) }
 	{}
 
 	vector<PcodeProcedure::dispatch_t> PcodeProcedure::dispatch = {
@@ -309,6 +309,8 @@ namespace pcodedump {
 	}
 
 	void PcodeProcedure::writeHeader(uint8_t const * segBegin, std::wostream& os) const {
+		auto procBegin = data.begin();
+		auto procLength = data.end() - data.begin();
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
 		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ")  P-Code (LSB)   ";
 		os << setfill(L' ') << dec << left;
@@ -322,8 +324,8 @@ namespace pcodedump {
 		if (!rawAttributeTable->procedureNumber) {
 			return;
 		}
-		uint8_t const * ic = procBegin;
-		while (ic && ic < (procBegin + procLength)) {
+		uint8_t const * ic = data.begin();
+		while (ic && ic < data.end()) {
 			
 			auto[opcode, decode_function] = dispatch[*ic];
 			ic = (this->*decode_function)(os, opcode, ic);
@@ -616,8 +618,7 @@ namespace pcodedump {
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) {
 			auto[procNumber, range] = value;
-			auto length = static_cast<int>(range.end() - range.begin());
-			return make_shared<PcodeProcedure>(*this, procNumber + 1, range.begin(), length);
+			return make_shared<PcodeProcedure>(*this, procNumber + 1, range);
 		});
 		return result;
 	}

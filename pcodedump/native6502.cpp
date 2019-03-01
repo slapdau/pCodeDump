@@ -97,12 +97,12 @@ namespace pcodedump {
 		return result.str();
 	}
 
-	Native6502Procedure::Native6502Procedure(Native6502Segment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength) :
-		base(segment, procedureNumber, procBegin, procLength),
+	Native6502Procedure::Native6502Procedure(Native6502Segment & segment, int procedureNumber, Range<std::uint8_t const> data) :
+		base(segment, procedureNumber, data),
 		segment{ segment },
-		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable const *>(procBegin + procLength - sizeof(RawNative6502AttributeTable)) }
+		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable const *>(data.end() - sizeof(RawNative6502AttributeTable)) }
 	{
-		this->procEnd = procBegin + procLength - sizeof(RawNative6502AttributeTable);
+		this->procEnd = data.end() - sizeof(RawNative6502AttributeTable);
 		for (auto table : { &baseRelocations, &segRelocations, &procRelocations, &interpRelocations }) {
 			procEnd = readRelocations(*table, procEnd);
 		}
@@ -430,6 +430,8 @@ namespace pcodedump {
 	}
 
 	void Native6502Procedure::writeHeader(std::uint8_t const * segBegin, std::wostream & os) const {
+		auto procBegin = data.begin();
+		auto procLength = data.end() - data.begin();
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
 		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ") Native (6502)  ";
 		os << endl;
@@ -437,7 +439,7 @@ namespace pcodedump {
 
 	/* Write a disassembly of the procedure to an output stream. */
 	void Native6502Procedure::disassemble(std::uint8_t const * segBegin, std::wostream & os) const {
-		uint8_t const * ic = procBegin;
+		uint8_t const * ic = data.begin();
 		os << uppercase;
 		while (ic && ic < procEnd) {
 			auto[opcode, decode_function] = dispatch[*ic];
@@ -598,12 +600,11 @@ namespace pcodedump {
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure> {
 			auto[procNumber, range] = value;
-			auto length = static_cast<int>(range.end() - range.begin());
 			// If the procedure number is recorded as 0, then it's a native procedure.
-			if (*(range.begin() + static_cast<int>(length) - 2)) {
-				return make_shared<PcodeProcedure>(*this, procNumber + 1, range.begin(), length);
+			if (*(range.end() - 2)) {
+				return make_shared<PcodeProcedure>(*this, procNumber + 1, range);
 			} else {
-				return make_shared<Native6502Procedure>(*this, procNumber + 1, range.begin(), length);
+				return make_shared<Native6502Procedure>(*this, procNumber + 1, range);
 			}
 		});
 		return result;

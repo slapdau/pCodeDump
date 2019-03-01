@@ -18,7 +18,6 @@
 #define _0058CB76_8CFA_4C70_8961_2F643D0EF3FB
 
 #include <cstdint>
-#include <tuple>
 #include <vector>
 #include <map>
 #include <memory>
@@ -31,8 +30,8 @@ namespace pcodedump {
 
 	class Procedure {
 	public:
-		Procedure(CodeSegment & segment, int procedureNumber, std::uint8_t const * procBegin, int procLength) :
-			segment{ segment }, procedureNumber{ procedureNumber }, procBegin{ procBegin }, procLength{ procLength }
+		Procedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> data) :
+			segment{ segment }, procedureNumber{ procedureNumber }, data{ data }
 		{}
 
 		virtual void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const = 0;
@@ -45,18 +44,17 @@ namespace pcodedump {
 		}
 
 		std::uint8_t const * getProcBegin() const {
-			return procBegin;
+			return data.begin();
 		}
 
 		bool contains(std::uint8_t const * address) const {
-			return procBegin <= address && address < procBegin + procLength;
+			return data.begin() <= address && address < data.end();
 		}
 
 	protected:
 		CodeSegment const & segment;
 		int const procedureNumber;
-		std::uint8_t const * const procBegin;
-		int const procLength;
+		Range<std::uint8_t const> data;
 	};
 
 	using Procedures = std::vector<std::shared_ptr<Procedure>>;
@@ -84,7 +82,6 @@ namespace pcodedump {
 
 
 	protected:
-		using ProcRange = std::tuple<int, std::uint8_t const *, int>; // Procedure number, start, length
 		std::map<int, Range<std::uint8_t const>> getProcRanges();
 		virtual std::unique_ptr<Procedures> initProcedures() = 0;
 

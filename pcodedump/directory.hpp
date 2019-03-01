@@ -23,7 +23,6 @@
 #include <map>
 #include <string>
 #include <memory>
-#include <tuple>
 #include <boost/endian/arithmetic.hpp>
 
 namespace pcodedump {
