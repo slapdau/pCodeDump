@@ -59,9 +59,10 @@ namespace pcodedump {
 	}
 
 	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
-		data{segBegin, segBegin+segLength }, procDict{ ProcedureDictionary::place(segBegin, segLength) }
+		data{segBegin, segBegin+segLength },
+		procDict{ ProcedureDictionary::place(segBegin, segLength) },
+		procedures { initProcedures() }
 	{
-		procedures = initProcedures();
 	}
 
 	/* Gets a vector of the procedure ranges in this code segment.  The tuples are
@@ -86,10 +87,10 @@ namespace pcodedump {
 			currentStart = end;
 		}
 
-		return move(procRanges);
+		return procRanges;
 	}
 
-	Procedure * CodeSegment::findProcedure(std::uint8_t const * address) const {
+	Procedure const * CodeSegment::findProcedure(std::uint8_t const * address) const {
 		auto result = find_if(cbegin(*procedures), cend(*procedures), [address](Procedures::value_type const & proc) {return proc->contains(address); });
 		if (result == cend(*procedures)) {
 			return nullptr;
@@ -103,12 +104,13 @@ namespace pcodedump {
 		os << L"    Procedures : " << procDict.numProcedures << endl;
 	}
 
+
 	/* Get the procedure code memory ranges and construct a vector of procedure objedts. P-code segments only
 	   have p-code procedures. */
-	unique_ptr<Procedures> CodeSegment::initProcedures() {
+	unique_ptr<CodeSegment::Procedures> CodeSegment::initProcedures() {
 		auto procRanges = getProcRanges();
 		auto result = make_unique<Procedures>();
-		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure> {
+		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure const> {
 			auto[procNumber, range] = value;
 			if (*(range.end() - 2)) {
 				return make_shared<PcodeProcedure>(*this, procNumber + 1, range);

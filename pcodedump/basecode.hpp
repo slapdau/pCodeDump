@@ -57,7 +57,6 @@ namespace pcodedump {
 		Range<std::uint8_t const> data;
 	};
 
-	using Procedures = std::vector<std::shared_ptr<Procedure>>;
 
 	class SegmentDirectoryEntry;
 	class ProcedureDictionary;
@@ -76,17 +75,19 @@ namespace pcodedump {
 
 		void writeHeader(std::wostream& os) const;
 		void disassemble(std::wostream& os) const;
-		Procedure * findProcedure(std::uint8_t const * address) const;
+		Procedure const * findProcedure(std::uint8_t const * address) const;
 
 
 	private:
+		using Procedures = std::vector<std::shared_ptr<Procedure const>>;
+
 		std::map<int, Range<std::uint8_t const>> getProcRanges();
 		std::unique_ptr<Procedures> initProcedures();
 
 	private:
 		Range<std::uint8_t const> data;
 		ProcedureDictionary const & procDict;
-		std::unique_ptr<Procedures> procedures;
+		std::unique_ptr<Procedures const> procedures;
 	};
 
 }
