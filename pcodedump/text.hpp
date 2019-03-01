@@ -29,7 +29,7 @@ namespace pcodedump {
 		TextSegment(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * text);
 		void write(std::wostream& os) const;
 	private:
-		SegmentDirectoryEntry & directoryEntry;
+		SegmentDirectoryEntry const & directoryEntry;
 		const std::uint8_t * text;
 	};
 

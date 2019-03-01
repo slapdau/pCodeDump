@@ -51,7 +51,7 @@ namespace pcodedump {
 		native_ga440,
 		native_m6502,
 		native_m6800,
-		native_ti9900,
+		native_tms9900,
 	};
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
@@ -77,7 +77,7 @@ namespace pcodedump {
 	class SegmentDirectoryEntry {
 		friend std::wostream& operator<<(std::wostream&, const SegmentDirectoryEntry&);
 	public:
-		SegmentDirectoryEntry(buff_t & buffer, RawSegmentDirectory * rawDict, int index, int endBlock);
+		SegmentDirectoryEntry(buff_t const & buffer, RawSegmentDirectory const * rawDict, int index, int endBlock);
 
 	public:
 
@@ -90,7 +90,7 @@ namespace pcodedump {
 		}
 
 	private:
-
+		
 		void writeHeader(std::wostream& os) const;
 
 		bool hasPcode() const {
@@ -106,7 +106,7 @@ namespace pcodedump {
 		std::unique_ptr<LinkageSegment> createLinkageSegment();
 
 	protected:
-		buff_t & buffer;
+		buff_t const & buffer;
 		std::wstring name;
 		int textBlock;
 		int codeBlock;
@@ -129,13 +129,13 @@ namespace pcodedump {
 
 		friend std::wostream& operator<<(std::wostream&, const SegmentDirectory&);
 	public:
-		SegmentDirectory(buff_t & buffer);
+		SegmentDirectory(buff_t const & buffer);
 
 	private:
 		std::unique_ptr<SegmentEntries> extractDirectoryEntries();
 	private:
-		buff_t & buffer;
-		RawSegmentDirectory * rawDirectory;
+		buff_t const & buffer;
+		RawSegmentDirectory const * rawDirectory;
 	public:
 		std::unique_ptr<SegmentEntries> entries;
 		std::uint64_t intrinsicLibraries;

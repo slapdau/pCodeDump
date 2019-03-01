@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <tuple>
 #include <vector>
+#include <map>
 #include <memory>
 #include <boost/endian/arithmetic.hpp>
 
@@ -60,13 +61,9 @@ namespace pcodedump {
 	using Procedures = std::vector<std::shared_ptr<Procedure>>;
 
 	class SegmentDirectoryEntry;
+	class ProcedureDictionary;
 
 	class CodeSegment {
-		struct RawProcedureDirectoryHead {
-			boost::endian::little_uint8_t segmentNumber;
-			boost::endian::little_uint8_t numProcedures;
-		};
-
 	public:
 		CodeSegment() = delete;
 		CodeSegment(const CodeSegment &) = delete;
@@ -76,13 +73,9 @@ namespace pcodedump {
 
 		virtual ~CodeSegment() = 0;
 
-		int getSegmentNumber() const {
-			return header->segmentNumber;
-		}
+		int getSegmentNumber() const;
 
-		int getNumProcedures() const {
-			return header->numProcedures;
-		}
+		int getNumProcedures() const;
 
 		uint8_t const * begin() const {
 			return segBegin;
@@ -95,7 +88,7 @@ namespace pcodedump {
 
 	protected:
 		using ProcRange = std::tuple<int, std::uint8_t const *, int>; // Procedure number, start, length
-		std::vector<ProcRange> getProcRanges();
+		std::map<int, std::tuple<std::uint8_t const *, std::intptr_t>> getProcRanges();
 		virtual std::unique_ptr<Procedures> initProcedures() = 0;
 
 
@@ -104,7 +97,7 @@ namespace pcodedump {
 		int segLength;
 
 	private:
-		RawProcedureDirectoryHead const * header;
+		ProcedureDictionary const & procDict;
 
 	protected:
 		std::unique_ptr<Procedures> entries;

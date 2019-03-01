@@ -615,8 +615,9 @@ namespace pcodedump {
 		auto procRange = getProcRanges();
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRange), std::end(procRange), back_inserter(*result), [this](const auto & value) {
-			auto [procNumber, start, length] = value;
-			return make_shared<PcodeProcedure>(*this, procNumber + 1, start, length);
+			auto [procNumber, range] = value;
+			auto[start, length] = range;
+			return make_shared<PcodeProcedure>(*this, procNumber + 1, start, static_cast<int>(length));
 		});
 		return result;
 	}

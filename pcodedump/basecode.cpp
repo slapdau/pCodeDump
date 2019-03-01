@@ -18,50 +18,80 @@
 #include "types.hpp"
 #include "directory.hpp"
 #include <iterator>
+#include <cstddef>
 
 using namespace std;
 using namespace boost::endian;
 
 namespace pcodedump {
 
+	class ProcedureDictionary final {
+	public:
+		static ProcedureDictionary const & place(std::uint8_t const * segStart, int segLength) {
+			return *reinterpret_cast<ProcedureDictionary const *>(segStart + segLength - sizeof(ProcedureDictionary));
+		}
+
+		std::uint8_t const * operator[](int index) const;
+
+
+	private:
+		// Restrict stack allocation.
+		~ProcedureDictionary() = default;
+
+		// Restrict normal heap allocation
+		void * operator new(std::size_t) noexcept { return nullptr; }
+		void operator delete(void * ptr, std::size_t) noexcept {}
+		void * operator new[](std::size_t) noexcept { return nullptr; }
+			void operator delete[](void * ptr, std::size_t) noexcept {}
+
+
+	public:
+		boost::endian::little_uint8_t const segmentNumber;
+		boost::endian::little_uint8_t const numProcedures;
+	};
+
+	std::uint8_t const * ProcedureDictionary::operator[](int index) const
+	{
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(this) - 2 - 2 * index) + sizeof(little_int16_t);
+	}
+
 	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
-		segBegin{ segBegin }, segLength{ segLength },
-		header{ reinterpret_cast<RawProcedureDirectoryHead const *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) }
+		segBegin{ segBegin }, segLength{ segLength }, procDict{ ProcedureDictionary::place(segBegin, segLength) }
 	{}
 
 	CodeSegment::~CodeSegment() {}
 
+	inline int CodeSegment::getSegmentNumber() const {
+		return procDict.segmentNumber;
+	}
+
+	inline int CodeSegment::getNumProcedures() const {
+		return procDict.numProcedures;
+	}
+
 	/* Gets a vector of the procedure ranges in this code segment.  The tuples are
-	    - procedure number
-	    - Pointer to start
+		- procedure number
+		- Pointer to start
 		- Length
 	   The procedure pointers in the segment point to the end of each pointer.  In
 	   memory this works well for the P-machine, but for disassembling the procedures
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information. */
-	vector<CodeSegment::ProcRange> CodeSegment::getProcRanges() {
-		auto procPtrs = reinterpret_cast<little_int16_t const *>(segBegin + segLength - sizeof(RawProcedureDirectoryHead)) - 1;
-		vector<tuple<int, uint8_t const *>> procEnd;
-		for (int index = 0; index != header->numProcedures; ++index) {
-			procEnd.emplace_back(make_tuple(index, derefSelfPtr(procPtrs - index) + sizeof(little_int16_t)));
+	map<int, tuple<uint8_t const *, intptr_t>> CodeSegment::getProcRanges() {
+		map<uint8_t const *, int> procEnds;
+		for (int index = 0; index != procDict.numProcedures; ++index) {
+			procEnds[procDict[index]] = index;
 		}
 
-		// Sort by address ascending.
-		sort(std::begin(procEnd), std::end(procEnd), [](const auto & left, const auto & right) { return get<1>(left) < get<1>(right); });
-
-		vector<ProcRange> procRange;
 		auto currentStart = segBegin;
-		transform(std::begin(procEnd), std::end(procEnd), back_inserter(procRange), [&currentStart, this](const tuple<int, uint8_t const *> & value) {
-			auto[procNumber, end] = value;
-			auto result = make_tuple(procNumber, currentStart, static_cast<int>(end - currentStart));
+		map<int, tuple<uint8_t const *, intptr_t>> procRanges;
+		for (auto procEnd : procEnds) {
+			auto[end, procNumber] = procEnd;
+			procRanges[procNumber] = make_tuple(currentStart, end - currentStart);
 			currentStart = end;
-			return result;
-		});
+		}
 
-		// Sort by procedure number ascending.  Restore order from disk file.
-		sort(std::begin(procRange), end(procRange), [](const auto & left, const auto & right) { return get<0>(left) < get<0>(right); });
-
-		return procRange;
+		return move(procRanges);
 	}
 
 	Procedure * CodeSegment::findProcedure(std::uint8_t const * address) const {
@@ -77,4 +107,5 @@ namespace pcodedump {
 	void CodeSegment::writeHeader(std::wostream& os) const {
 		os << L"    Procedures : " << getNumProcedures() << endl;
 	}
+
 }

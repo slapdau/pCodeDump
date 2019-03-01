@@ -56,16 +56,16 @@ namespace pcodedump {
 	}
 
 	map<MachineType, wstring> machineType = {
-		{MachineType::undentified,   L"Unidentified"},
-		{MachineType::pcode_big,     L"P-Code (MSB)"},
-		{MachineType::pcode_little,  L"P-Code (LSB)"},
-		{MachineType::native_pdp11,  L"Native (PDP-11)"},
-		{MachineType::native_m8080,  L"Native (8080)"},
-		{MachineType::native_z80,    L"Native (Z80)"},
-		{MachineType::native_ga440,  L"Native (GA 440)"},
-		{MachineType::native_m6502,  L"Native (6502)"},
-		{MachineType::native_m6800,  L"Native (6800)"},
-		{MachineType::native_ti9900, L"Native (TI 9900)"},
+		{MachineType::undentified,    L"Unidentified"},
+		{MachineType::pcode_big,      L"P-Code (MSB)"},
+		{MachineType::pcode_little,   L"P-Code (LSB)"},
+		{MachineType::native_pdp11,   L"Native (PDP-11)"},
+		{MachineType::native_m8080,   L"Native (8080)"},
+		{MachineType::native_z80,     L"Native (Z80)"},
+		{MachineType::native_ga440,   L"Native (GA 440)"},
+		{MachineType::native_m6502,   L"Native (6502)"},
+		{MachineType::native_m6800,   L"Native (6800)"},
+		{MachineType::native_tms9900, L"Native (TMS9900)"},
 	};
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value) {
@@ -73,7 +73,7 @@ namespace pcodedump {
 		return os;
 	}
 
-	SegmentDirectoryEntry::SegmentDirectoryEntry(buff_t & buffer, RawSegmentDirectory * rawDict, int index, int endBlock) :
+	SegmentDirectoryEntry::SegmentDirectoryEntry(buff_t const & buffer, RawSegmentDirectory const * rawDict, int index, int endBlock) :
 		buffer{ buffer },
 		name{ rawDict->segName[index], rawDict->segName[index] + 8 },
 		textBlock{ rawDict->textAddr[index] },
@@ -186,9 +186,9 @@ namespace pcodedump {
 		return os;
 	}
 
-	SegmentDirectory::SegmentDirectory(buff_t & buffer) :
+	SegmentDirectory::SegmentDirectory(buff_t const & buffer) :
 		buffer{ buffer },
-		rawDirectory{ reinterpret_cast<RawSegmentDirectory *>(buffer.data()) },
+		rawDirectory{ reinterpret_cast<RawSegmentDirectory const *>(buffer.data()) },
 		entries{ extractDirectoryEntries() },
 		intrinsicLibraries{ rawDirectory->intrinsicSegs }
 	{
@@ -211,8 +211,8 @@ namespace pcodedump {
 		   Data blocks use 0 as a special value for the segment end. Segment block ranges are treated
 		   as [begin, end), so the block number returned is actually one block past the end block of
 		   the segment.  For the last segment in a file, this block number be past the end of the file. */
-		auto getSegmentEnds(buff_t & buffer) {
-			auto directory = reinterpret_cast<RawSegmentDirectory *>(buffer.data());
+		auto getSegmentEnds(buff_t const & buffer) {
+			auto directory = reinterpret_cast<RawSegmentDirectory const *>(buffer.data());
 			vector<tuple<int, int>> segmentStarts;
 			for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
 				if (directory->diskInfo[directoryIndex].codeleng) {
@@ -252,11 +252,10 @@ namespace pcodedump {
 	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
 	   directory entry slots will not be returned. */
 	unique_ptr<SegmentEntries> SegmentDirectory::extractDirectoryEntries() {
-		auto rawDict = reinterpret_cast<RawSegmentDirectory *>(buffer.data());
+		auto rawDict = reinterpret_cast<RawSegmentDirectory const *>(buffer.data());
 		auto entries = make_unique<SegmentEntries>();
 		for (auto segment : getSegmentEnds(buffer)) {
-			int directoryIndex, segmentEnd;
-			tie(directoryIndex, segmentEnd) = segment;
+			auto [directoryIndex, segmentEnd] = segment;
 			entries->push_back(make_shared<SegmentDirectoryEntry>(buffer, rawDict, directoryIndex, segmentEnd));
 		}
 		return entries;

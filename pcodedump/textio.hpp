@@ -32,6 +32,14 @@ namespace pcodedump {
 
 	public:
 		FmtSentry(ios_t &stream) : flags{ stream.flags() }, stream{ stream } {}
+
+		// No moving or copying.
+		FmtSentry(FmtSentry const &) = delete;
+		FmtSentry(FmtSentry &&) = delete;
+		FmtSentry & operator=(FmtSentry const &) = delete;
+		FmtSentry & operator=(FmtSentry &&) = delete;
+
+
 		~FmtSentry() {
 			stream.flags(flags);
 		}
