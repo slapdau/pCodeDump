@@ -27,8 +27,8 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	LinkageInfo::LinkageInfo(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * linkage) :
-		directoryEntry{ directoryEntry }, linkage{ linkage }
+	LinkageInfo::LinkageInfo(Segment & segment, const std::uint8_t * linkage) :
+		segment{ segment }, linkage{ linkage }
 	{
 	}
 
@@ -124,9 +124,9 @@ namespace pcodedump {
 
 	uint8_t const * LinkageInfo::decode_endOfFile(wostream & os, uint8_t const *current) const {
 		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		if (directoryEntry.getSegmentKind() != SegmentKind::seprtseg) {
+		if (segment.getSegmentKind() != SegmentKind::seprtseg) {
 			os << dec << parameters[0] << " global words";
-			if (directoryEntry.getSegmentKind() == SegmentKind::unlinkedIntrins) {
+			if (segment.getSegmentKind() == SegmentKind::unlinkedIntrins) {
 				os << ", private data seg #" << parameters[1];
 			}
 			os << endl;

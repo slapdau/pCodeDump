@@ -58,7 +58,7 @@ namespace pcodedump {
 		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(this) - 2 - 2 * index) + sizeof(little_int16_t);
 	}
 
-	CodePart::CodePart(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
+	CodePart::CodePart(Segment & segment, std::uint8_t const * segBegin, int segLength) :
 		data{segBegin, segBegin+segLength },
 		procDict{ ProcedureDictionary::place(segBegin, segLength) },
 		procedures { initProcedures() }
@@ -81,8 +81,7 @@ namespace pcodedump {
 
 		auto currentStart = begin();
 		map<int, Range<std::uint8_t const>> procRanges;
-		for (auto procEnd : procEnds) {
-			auto[end, procNumber] = procEnd;
+		for (auto [end, procNumber] : procEnds) {
 			procRanges[procNumber] = Range(currentStart, end);
 			currentStart = end;
 		}

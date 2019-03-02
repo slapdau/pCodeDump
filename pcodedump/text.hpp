@@ -22,14 +22,14 @@
 
 namespace pcodedump {
 
-	class SegmentDirectoryEntry;
+	class Segment;
 
 	class InterfaceText {
 	public:
-		InterfaceText(SegmentDirectoryEntry & directoryEntry, const std::uint8_t * text);
+		InterfaceText(Segment & segment, const std::uint8_t * text);
 		void write(std::wostream& os) const;
 	private:
-		SegmentDirectoryEntry const & directoryEntry;
+		Segment const & segment;
 		const std::uint8_t * text;
 	};
 

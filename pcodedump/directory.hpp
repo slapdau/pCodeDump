@@ -73,10 +73,10 @@ namespace pcodedump {
 	class InterfaceText;
 	class LinkageInfo;
 
-	class SegmentDirectoryEntry {
-		friend std::wostream& operator<<(std::wostream&, const SegmentDirectoryEntry&);
+	class Segment {
+		friend std::wostream& operator<<(std::wostream&, const Segment&);
 	public:
-		SegmentDirectoryEntry(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock);
+		Segment(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock);
 
 	public:
 
@@ -120,9 +120,9 @@ namespace pcodedump {
 		std::unique_ptr<LinkageInfo> linkageInfo;
 	};
 
-	std::wostream& operator<<(std::wostream& os, const SegmentDirectoryEntry& value);
+	std::wostream& operator<<(std::wostream& os, const Segment& segment);
 
-	using SegmentEntries = std::vector<std::shared_ptr<SegmentDirectoryEntry>>;
+	using Segments = std::vector<std::shared_ptr<Segment>>;
 
 	class SegmentDirectory {
 
@@ -131,12 +131,12 @@ namespace pcodedump {
 		SegmentDirectory(buff_t const & buffer);
 
 	private:
-		std::unique_ptr<SegmentEntries> extractDirectoryEntries();
+		std::unique_ptr<Segments> extractSegments();
 	private:
 		buff_t const & buffer;
 		SegmentDictionary const * segmentDictionary;
 	public:
-		std::unique_ptr<SegmentEntries> entries;
+		std::unique_ptr<Segments> segments;
 		std::uint64_t intrinsicLibraries;
 		std::wstring comment;
 	};

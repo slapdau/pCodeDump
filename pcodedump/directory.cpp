@@ -73,7 +73,7 @@ namespace pcodedump {
 		return os;
 	}
 
-	SegmentDirectoryEntry::SegmentDirectoryEntry(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock) :
+	Segment::Segment(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock) :
 		buffer{ buffer },
 		name{ segmentDictionary->segName[index], segmentDictionary->segName[index] + 8 },
 		textBlock{ segmentDictionary->textAddr[index] },
@@ -91,7 +91,7 @@ namespace pcodedump {
 	}
 
 	/* Create a new correctly subtyped code segment object if this directory entry has code (everything except data segments). */
-	unique_ptr<CodePart> SegmentDirectoryEntry::createCodePart() {
+	unique_ptr<CodePart> Segment::createCodePart() {
 		if (hasPcode()) {
 			return make_unique<CodePart>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
 		} else if (has6502code()) {
@@ -102,7 +102,7 @@ namespace pcodedump {
 	}
 
 	/* Create a new interface text segment if this directry entry points to one. */
-	unique_ptr<InterfaceText> SegmentDirectoryEntry::createInterfaceText() {
+	unique_ptr<InterfaceText> Segment::createInterfaceText() {
 		if (this->textBlock) {
 			return make_unique<InterfaceText>(*this, buffer.data() + textBlock * BLOCK_SIZE);
 		} else {
@@ -129,7 +129,7 @@ namespace pcodedump {
 
 	/* Create a new linkage segment if this directory entry has unlinked code.
 	   The location of linkage data has to be inferred as the block following code data. */
-	unique_ptr<LinkageInfo> SegmentDirectoryEntry::createLinkageInfo()
+	unique_ptr<LinkageInfo> Segment::createLinkageInfo()
 	{
 		if (hasLinkage(this->segmentKind)) {
 			assert(this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock));
@@ -139,7 +139,7 @@ namespace pcodedump {
 		}
 	}
 
-	void SegmentDirectoryEntry::writeHeader(std::wostream& os) const {
+	void Segment::writeHeader(std::wostream& os) const {
 		FmtSentry<wostream::char_type> sentry{ os };
 		os << "Segment " << dec << this->segmentNumber << L": ";
 		os << this->name << L" (" << this->segmentKind << L")" << endl;
@@ -168,19 +168,19 @@ namespace pcodedump {
 		}
 	}
 
-	std::wostream& operator<<(std::wostream& os, const SegmentDirectoryEntry& value) {
-		value.writeHeader(os);
+	std::wostream& operator<<(std::wostream& os, const Segment & segment) {
+		segment.writeHeader(os);
 		os << endl;
-		if (showText && value.interfaceText.get() != nullptr) {
-			value.interfaceText->write(os);
+		if (showText && segment.interfaceText.get() != nullptr) {
+			segment.interfaceText->write(os);
 			os << endl;
 		}
-		if (listProcs && value.codePart.get() != nullptr) {
-			value.codePart->disassemble(os);
+		if (listProcs && segment.codePart.get() != nullptr) {
+			segment.codePart->disassemble(os);
 			os << endl;
 		}
-		if (showLinkage && value.linkageInfo.get() != nullptr) {
-			value.linkageInfo->write(os);
+		if (showLinkage && segment.linkageInfo.get() != nullptr) {
+			segment.linkageInfo->write(os);
 			os << endl;
 		}
 		return os;
@@ -189,7 +189,7 @@ namespace pcodedump {
 	SegmentDirectory::SegmentDirectory(buff_t const & buffer) :
 		buffer{ buffer },
 		segmentDictionary{ reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
-		entries{ extractDirectoryEntries() },
+		segments{ extractSegments() },
 		intrinsicLibraries{ segmentDictionary->intrinsicSegs }
 	{
 		int size = segmentDictionary->comment[0];
@@ -251,14 +251,13 @@ namespace pcodedump {
 
 	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
 	   directory entry slots will not be returned. */
-	unique_ptr<SegmentEntries> SegmentDirectory::extractDirectoryEntries() {
+	unique_ptr<Segments> SegmentDirectory::extractSegments() {
 		auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
-		auto entries = make_unique<SegmentEntries>();
-		for (auto segment : getSegmentEnds(buffer)) {
-			auto [directoryIndex, segmentEnd] = segment;
-			entries->push_back(make_shared<SegmentDirectoryEntry>(buffer, segmentDictionary, directoryIndex, segmentEnd));
+		auto segments = make_unique<Segments>();
+		for (auto [directoryIndex, segmentEnd] : getSegmentEnds(buffer)) {
+			segments->push_back(make_shared<Segment>(buffer, segmentDictionary, directoryIndex, segmentEnd));
 		}
-		return entries;
+		return segments;
 	}
 
 	namespace {
@@ -291,13 +290,13 @@ namespace pcodedump {
 		os << L"Comment: " << comment << endl;
 		writeIntrinsicUnits(os, value.intrinsicLibraries);
 		os << endl;
-		SegmentEntries entries;
-		copy(begin(*value.entries), end(*value.entries), back_inserter(entries));
+		Segments segments;
+		copy(begin(*value.segments), end(*value.segments), back_inserter(segments));
 		if (addressOrder) {
-			sort(begin(entries), end(entries), [](const auto &left, const auto &right) { return left->getFirstBlock() < right->getFirstBlock(); });
+			sort(begin(segments), end(segments), [](const auto &left, const auto &right) { return left->getFirstBlock() < right->getFirstBlock(); });
 		}
-		for (auto entry : entries) {
-			os << *entry << endl;
+		for (auto segment : segments) {
+			os << *segment << endl;
 		}
 		return os;
 	}

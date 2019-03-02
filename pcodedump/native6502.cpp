@@ -421,8 +421,7 @@ namespace pcodedump {
 	/* Check the nominated CPU type, and patch the opcode decoding dispatch table if necessary. */
 	void Native6502Procedure::initialiseCpu() {
 		if (cpu == cpu_t::_65c02) {
-			for (auto entry : dispatch_65c02) {
-				auto[instruction, dispatchUpdate] = entry;
+			for (auto[instruction, dispatchUpdate] : dispatch_65c02) {
 				dispatch[instruction] = dispatchUpdate;
 			}
 		}
