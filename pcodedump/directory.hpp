@@ -55,7 +55,7 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
-	struct RawSegmentDirectory {
+	struct SegmentDictionary {
 		struct {
 			boost::endian::little_int16_t codeaddr;
 			boost::endian::little_int16_t codeleng;
@@ -76,7 +76,7 @@ namespace pcodedump {
 	class SegmentDirectoryEntry {
 		friend std::wostream& operator<<(std::wostream&, const SegmentDirectoryEntry&);
 	public:
-		SegmentDirectoryEntry(buff_t const & buffer, RawSegmentDirectory const * rawDict, int index, int endBlock);
+		SegmentDirectoryEntry(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock);
 
 	public:
 
@@ -134,7 +134,7 @@ namespace pcodedump {
 		std::unique_ptr<SegmentEntries> extractDirectoryEntries();
 	private:
 		buff_t const & buffer;
-		RawSegmentDirectory const * rawDirectory;
+		SegmentDictionary const * segmentDictionary;
 	public:
 		std::unique_ptr<SegmentEntries> entries;
 		std::uint64_t intrinsicLibraries;

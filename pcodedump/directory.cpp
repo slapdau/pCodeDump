@@ -73,17 +73,17 @@ namespace pcodedump {
 		return os;
 	}
 
-	SegmentDirectoryEntry::SegmentDirectoryEntry(buff_t const & buffer, RawSegmentDirectory const * rawDict, int index, int endBlock) :
+	SegmentDirectoryEntry::SegmentDirectoryEntry(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock) :
 		buffer{ buffer },
-		name{ rawDict->segName[index], rawDict->segName[index] + 8 },
-		textBlock{ rawDict->textAddr[index] },
-		codeBlock{ rawDict->diskInfo[index].codeaddr },
-		codeLength{ rawDict->diskInfo[index].codeleng },
+		name{ segmentDictionary->segName[index], segmentDictionary->segName[index] + 8 },
+		textBlock{ segmentDictionary->textAddr[index] },
+		codeBlock{ segmentDictionary->diskInfo[index].codeaddr },
+		codeLength{ segmentDictionary->diskInfo[index].codeleng },
 		nextSegBlock{ endBlock },
-		segmentKind{ static_cast<SegmentKind>(int{ rawDict->segKind[index] }) },
-		segmentNumber{ int{ rawDict->segInfo[index] } &0xff },
-		machineType{ static_cast<MachineType>(int{ rawDict->segInfo[index] } >> 8 & 0xf) },
-		version{ int{ rawDict->segInfo[index] } >> 13 & 0x7 },
+		segmentKind{ static_cast<SegmentKind>(int{ segmentDictionary->segKind[index] }) },
+		segmentNumber{ int{ segmentDictionary->segInfo[index] } &0xff },
+		machineType{ static_cast<MachineType>(int{ segmentDictionary->segInfo[index] } >> 8 & 0xf) },
+		version{ int{ segmentDictionary->segInfo[index] } >> 13 & 0x7 },
 		codePart{ createCodePart() },
 		interfaceText{ createInterfaceText() },
 		linkageInfo{ createLinkageInfo() }
@@ -188,12 +188,12 @@ namespace pcodedump {
 
 	SegmentDirectory::SegmentDirectory(buff_t const & buffer) :
 		buffer{ buffer },
-		rawDirectory{ reinterpret_cast<RawSegmentDirectory const *>(buffer.data()) },
+		segmentDictionary{ reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
 		entries{ extractDirectoryEntries() },
-		intrinsicLibraries{ rawDirectory->intrinsicSegs }
+		intrinsicLibraries{ segmentDictionary->intrinsicSegs }
 	{
-		int size = rawDirectory->comment[0];
-		comment = wstring{ rawDirectory->comment + 1, rawDirectory->comment + 1 + size };
+		int size = segmentDictionary->comment[0];
+		comment = wstring{ segmentDictionary->comment + 1, segmentDictionary->comment + 1 + size };
 	}
 
 	namespace {
@@ -212,12 +212,12 @@ namespace pcodedump {
 		   as [begin, end), so the block number returned is actually one block past the end block of
 		   the segment.  For the last segment in a file, this block number be past the end of the file. */
 		auto getSegmentEnds(buff_t const & buffer) {
-			auto directory = reinterpret_cast<RawSegmentDirectory const *>(buffer.data());
+			auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
 			vector<tuple<int, int>> segmentStarts;
 			for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
-				if (directory->diskInfo[directoryIndex].codeleng) {
-					int codeaddr = directory->diskInfo[directoryIndex].codeaddr;
-					int textaddr = directory->textAddr[directoryIndex];
+				if (segmentDictionary->diskInfo[directoryIndex].codeleng) {
+					int codeaddr = segmentDictionary->diskInfo[directoryIndex].codeaddr;
+					int textaddr = segmentDictionary->textAddr[directoryIndex];
 					segmentStarts.push_back(make_tuple(directoryIndex, textaddr != 0 ? textaddr : codeaddr));
 				}
 			}
@@ -252,11 +252,11 @@ namespace pcodedump {
 	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
 	   directory entry slots will not be returned. */
 	unique_ptr<SegmentEntries> SegmentDirectory::extractDirectoryEntries() {
-		auto rawDict = reinterpret_cast<RawSegmentDirectory const *>(buffer.data());
+		auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
 		auto entries = make_unique<SegmentEntries>();
 		for (auto segment : getSegmentEnds(buffer)) {
 			auto [directoryIndex, segmentEnd] = segment;
-			entries->push_back(make_shared<SegmentDirectoryEntry>(buffer, rawDict, directoryIndex, segmentEnd));
+			entries->push_back(make_shared<SegmentDirectoryEntry>(buffer, segmentDictionary, directoryIndex, segmentEnd));
 		}
 		return entries;
 	}
