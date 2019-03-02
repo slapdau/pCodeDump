@@ -57,6 +57,25 @@ namespace pcodedump {
 
 	class SegmentDictionary;
 
+	class SegmentDictionaryEntry {
+	public:
+		SegmentDictionaryEntry(SegmentDictionary const & segmentDictionary, int index);
+
+		int codeAddress() const;
+		int codeLength() const;
+		std::wstring name() const;
+		int textAddress() const;
+		SegmentKind segmentKind() const;
+		int segmentNumber() const;
+		MachineType machineType() const;
+		int version() const;
+	private:
+		SegmentDictionary const & segmentDictionary;
+		int index;
+	};
+
+	class SegmentDictionary;
+
 	class CodePart;
 	class InterfaceText;
 	class LinkageInfo;

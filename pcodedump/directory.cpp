@@ -53,6 +53,42 @@ namespace pcodedump {
 		char comment[80];
 	};
 
+	SegmentDictionaryEntry::SegmentDictionaryEntry(SegmentDictionary const & segmentDictionary, int index) :
+		segmentDictionary{ segmentDictionary }, index{ index }
+	{}
+
+	int SegmentDictionaryEntry::codeAddress() const {
+		return segmentDictionary.diskInfo[index].codeaddr;
+	}
+
+	int SegmentDictionaryEntry::codeLength() const {
+		return segmentDictionary.diskInfo[index].codeaddr;
+	}
+
+	std::wstring SegmentDictionaryEntry::name() const {
+		return wstring{ segmentDictionary.segName[index], segmentDictionary.segName[index] + 8 };
+	}
+
+	int SegmentDictionaryEntry::textAddress() const {
+		segmentDictionary.textAddr[index];
+	}
+
+	SegmentKind SegmentDictionaryEntry::segmentKind() const {
+		return static_cast<SegmentKind>(int{ segmentDictionary.segKind[index] });
+	}
+
+	int SegmentDictionaryEntry::segmentNumber() const {
+		return int{ segmentDictionary.segInfo[index] } &0xff;
+	}
+
+	MachineType SegmentDictionaryEntry::machineType() const {
+		return static_cast<MachineType>(int{ segmentDictionary.segInfo[index] } >> 8 & 0xf);
+	}
+
+	int SegmentDictionaryEntry::version() const {
+		return int{ segmentDictionary.segInfo[index] } >> 13 & 0x7;
+	}
+
 	map<SegmentKind, wstring> segKind = {
 		{SegmentKind::linked,          L"LINKED"},
 		{SegmentKind::hostseg,         L"HOSTSEG"},
