@@ -51,8 +51,8 @@ main(int argc, char *argv[], char *envp[]) {
 		if (parseOptions(argc, argv, envp)) {
 			Native6502Procedure::initialiseCpu();
 			auto buffer = readFile(filename);
-			SegmentDirectory directory{*buffer};
-			wcout << directory;
+			PcodeFile file{*buffer};
+			wcout << file;
 		}
 		return 0;
 	} catch (ios::failure &ex) {

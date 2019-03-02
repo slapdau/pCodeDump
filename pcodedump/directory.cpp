@@ -186,7 +186,7 @@ namespace pcodedump {
 		return os;
 	}
 
-	SegmentDirectory::SegmentDirectory(buff_t const & buffer) :
+	PcodeFile::PcodeFile(buff_t const & buffer) :
 		buffer{ buffer },
 		segmentDictionary{ reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
 		segments{ extractSegments() },
@@ -251,7 +251,7 @@ namespace pcodedump {
 
 	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
 	   directory entry slots will not be returned. */
-	unique_ptr<Segments> SegmentDirectory::extractSegments() {
+	unique_ptr<Segments> PcodeFile::extractSegments() {
 		auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
 		auto segments = make_unique<Segments>();
 		for (auto [directoryIndex, segmentEnd] : getSegmentEnds(buffer)) {
@@ -282,7 +282,7 @@ namespace pcodedump {
 		}
 	}
 
-	std::wostream& operator<<(std::wostream& os, const SegmentDirectory& value) {
+	std::wostream& operator<<(std::wostream& os, const PcodeFile& value) {
 		FmtSentry<wostream::char_type> sentry{ os };
 		wcout << "Total blocks: " << (value.buffer.size() - 1) / BLOCK_SIZE + 1 << endl;
 		wstring comment = value.comment;

@@ -124,11 +124,11 @@ namespace pcodedump {
 
 	using Segments = std::vector<std::shared_ptr<Segment>>;
 
-	class SegmentDirectory {
+	class PcodeFile {
 
-		friend std::wostream& operator<<(std::wostream&, const SegmentDirectory&);
+		friend std::wostream& operator<<(std::wostream&, const PcodeFile&);
 	public:
-		SegmentDirectory(buff_t const & buffer);
+		PcodeFile(buff_t const & buffer);
 
 	private:
 		std::unique_ptr<Segments> extractSegments();
@@ -141,7 +141,7 @@ namespace pcodedump {
 		std::wstring comment;
 	};
 
-	std::wostream& operator<<(std::wostream& os, const SegmentDirectory& value);
+	std::wostream& operator<<(std::wostream& os, const PcodeFile& value);
 
 }
 
