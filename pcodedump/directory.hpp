@@ -69,7 +69,7 @@ namespace pcodedump {
 		char comment[80];
 	};
 
-	class CodeSegment;
+	class CodePart;
 	class InterfaceText;
 	class LinkageInfo;
 
@@ -100,7 +100,7 @@ namespace pcodedump {
 			return machineType == MachineType::native_m6502 && segmentKind != SegmentKind::dataSeg;
 		}
 
-		std::unique_ptr<CodeSegment> createCodeSegment();
+		std::unique_ptr<CodePart> createCodePart();
 		std::unique_ptr<InterfaceText> createInterfaceText();
 		std::unique_ptr<LinkageInfo> createLinkageInfo();
 
@@ -115,7 +115,7 @@ namespace pcodedump {
 		int segmentNumber;
 		MachineType machineType;
 		int version;
-		std::unique_ptr<CodeSegment> codeSegment;
+		std::unique_ptr<CodePart> codePart;
 		std::unique_ptr<InterfaceText> interfaceText;
 		std::unique_ptr<LinkageInfo> linkageInfo;
 	};

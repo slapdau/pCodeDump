@@ -26,12 +26,12 @@
 
 namespace pcodedump {
 
-	class CodeSegment;
+	class CodePart;
 
 	class Procedure {
 	public:
-		Procedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> data) :
-			segment{ segment }, procedureNumber{ procedureNumber }, data{ data }
+		Procedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> data) :
+			codePart{ codePart }, procedureNumber{ procedureNumber }, data{ data }
 		{}
 
 		virtual void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const = 0;
@@ -52,7 +52,7 @@ namespace pcodedump {
 		}
 
 	protected:
-		CodeSegment const & segment;
+		CodePart const & codePart;
 		int const procedureNumber;
 		Range<std::uint8_t const> data;
 	};
@@ -61,13 +61,13 @@ namespace pcodedump {
 	class SegmentDirectoryEntry;
 	class ProcedureDictionary;
 
-	class CodeSegment final {
+	class CodePart final {
 	public:
-		CodeSegment() = delete;
-		CodeSegment(const CodeSegment &) = delete;
-		CodeSegment(const CodeSegment &&) = delete;
+		CodePart() = delete;
+		CodePart(const CodePart &) = delete;
+		CodePart(const CodePart &&) = delete;
 
-		CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
+		CodePart(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength);
 
 		uint8_t const * begin() const {
 			return data.begin();

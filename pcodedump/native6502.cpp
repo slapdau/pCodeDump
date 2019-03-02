@@ -74,8 +74,8 @@ namespace pcodedump {
 		auto value = *reinterpret_cast<little_uint16_t const *>(address);
 		wostringstream result;
 		if (pcodedump::contains(segRelocations, address)) {
-			uint8_t const * target = segment.begin() + value;
-			Procedure const * targetProc = segment.findProcedure(target);
+			uint8_t const * target = codePart.begin() + value;
+			Procedure const * targetProc = codePart.findProcedure(target);
 			if (targetProc) {
 				value = static_cast<int>(target - targetProc->getProcBegin());
 				result << L".proc#" << dec << targetProc->getProcedureNumber() << "+";
@@ -97,9 +97,8 @@ namespace pcodedump {
 		return result.str();
 	}
 
-	Native6502Procedure::Native6502Procedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> data) :
-		base(segment, procedureNumber, data),
-		segment{ segment },
+	Native6502Procedure::Native6502Procedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> data) :
+		base(codePart, procedureNumber, data),
 		rawAttributeTable{ reinterpret_cast<RawNative6502AttributeTable const *>(data.end() - sizeof(RawNative6502AttributeTable)) }
 	{
 		this->procEnd = data.end() - sizeof(RawNative6502AttributeTable);

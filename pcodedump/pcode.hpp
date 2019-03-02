@@ -31,8 +31,6 @@
 
 namespace pcodedump {
 
-	class PcodeSegment;
-
 	class PcodeProcedure : public Procedure {
 
 		struct RawPcodeAttributeTable {
@@ -47,7 +45,7 @@ namespace pcodedump {
 
 	public:
 		using base = Procedure;
-		PcodeProcedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> range);
+		PcodeProcedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range);
 
 		void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const;
 		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;

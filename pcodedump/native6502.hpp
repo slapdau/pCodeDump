@@ -29,8 +29,6 @@
 
 namespace pcodedump {
 
-	class Native6502Segment;
-
 	class Native6502Procedure : public Procedure {
 
 		struct RawNative6502AttributeTable {
@@ -40,7 +38,7 @@ namespace pcodedump {
 		};
 	public:
 		using base = Procedure;
-		Native6502Procedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> range);
+		Native6502Procedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range);
 
 		static void initialiseCpu();
 
@@ -48,8 +46,6 @@ namespace pcodedump {
 		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;
 
 	private:
-		CodeSegment & segment;
-
 		using Relocations = std::vector<std::uint8_t const *>;
 
 

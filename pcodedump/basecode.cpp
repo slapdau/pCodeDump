@@ -58,7 +58,7 @@ namespace pcodedump {
 		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(this) - 2 - 2 * index) + sizeof(little_int16_t);
 	}
 
-	CodeSegment::CodeSegment(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
+	CodePart::CodePart(SegmentDirectoryEntry & directoryEntry, std::uint8_t const * segBegin, int segLength) :
 		data{segBegin, segBegin+segLength },
 		procDict{ ProcedureDictionary::place(segBegin, segLength) },
 		procedures { initProcedures() }
@@ -73,7 +73,7 @@ namespace pcodedump {
 	   memory this works well for the P-machine, but for disassembling the procedures
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information. */
-	map<int, Range<uint8_t const>> CodeSegment::getProcRanges() {
+	map<int, Range<uint8_t const>> CodePart::getProcRanges() {
 		map<uint8_t const *, int> procEnds;
 		for (int index = 0; index != procDict.numProcedures; ++index) {
 			procEnds[procDict[index]] = index;
@@ -90,7 +90,7 @@ namespace pcodedump {
 		return procRanges;
 	}
 
-	Procedure const * CodeSegment::findProcedure(std::uint8_t const * address) const {
+	Procedure const * CodePart::findProcedure(std::uint8_t const * address) const {
 		auto result = find_if(cbegin(*procedures), cend(*procedures), [address](Procedures::value_type const & proc) {return proc->contains(address); });
 		if (result == cend(*procedures)) {
 			return nullptr;
@@ -100,14 +100,14 @@ namespace pcodedump {
 	}
 
 
-	void CodeSegment::writeHeader(std::wostream& os) const {
+	void CodePart::writeHeader(std::wostream& os) const {
 		os << L"    Procedures : " << procDict.numProcedures << endl;
 	}
 
 
 	/* Get the procedure code memory ranges and construct a vector of procedure objedts. P-code segments only
 	   have p-code procedures. */
-	unique_ptr<CodeSegment::Procedures> CodeSegment::initProcedures() {
+	unique_ptr<CodePart::Procedures> CodePart::initProcedures() {
 		auto procRanges = getProcRanges();
 		auto result = make_unique<Procedures>();
 		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure const> {
@@ -121,7 +121,7 @@ namespace pcodedump {
 		return result;
 	}
 
-	void CodeSegment::disassemble(std::wostream& os) const {
+	void CodePart::disassemble(std::wostream& os) const {
 		Procedures procedures{ *(this->procedures) };
 		if (addressOrder) {
 			sort(std::begin(procedures), std::end(procedures), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });

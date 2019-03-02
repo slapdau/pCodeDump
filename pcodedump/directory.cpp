@@ -84,20 +84,20 @@ namespace pcodedump {
 		segmentNumber{ int{ rawDict->segInfo[index] } &0xff },
 		machineType{ static_cast<MachineType>(int{ rawDict->segInfo[index] } >> 8 & 0xf) },
 		version{ int{ rawDict->segInfo[index] } >> 13 & 0x7 },
-		codeSegment{ createCodeSegment() },
+		codePart{ createCodePart() },
 		interfaceText{ createInterfaceText() },
 		linkageInfo{ createLinkageInfo() }
 	{
 	}
 
 	/* Create a new correctly subtyped code segment object if this directory entry has code (everything except data segments). */
-	unique_ptr<CodeSegment> SegmentDirectoryEntry::createCodeSegment() {
+	unique_ptr<CodePart> SegmentDirectoryEntry::createCodePart() {
 		if (hasPcode()) {
-			return make_unique<CodeSegment>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
+			return make_unique<CodePart>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
 		} else if (has6502code()) {
-			return make_unique<CodeSegment>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
+			return make_unique<CodePart>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
 		} else {
-			return unique_ptr<CodeSegment>(nullptr);
+			return unique_ptr<CodePart>(nullptr);
 		}
 	}
 
@@ -163,8 +163,8 @@ namespace pcodedump {
 		}
 		os << L"        Length : " << this->codeLength << endl;
 		os << L"  Segment info : version=" << this->version << ", mType=" << this->machineType << endl;
-		if (this->codeSegment.get() != nullptr) {
-			this->codeSegment->writeHeader(os);
+		if (this->codePart.get() != nullptr) {
+			this->codePart->writeHeader(os);
 		}
 	}
 
@@ -175,8 +175,8 @@ namespace pcodedump {
 			value.interfaceText->write(os);
 			os << endl;
 		}
-		if (listProcs && value.codeSegment.get() != nullptr) {
-			value.codeSegment->disassemble(os);
+		if (listProcs && value.codePart.get() != nullptr) {
+			value.codePart->disassemble(os);
 			os << endl;
 		}
 		if (showLinkage && value.linkageInfo.get() != nullptr) {

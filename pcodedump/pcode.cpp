@@ -31,8 +31,8 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	PcodeProcedure::PcodeProcedure(CodeSegment & segment, int procedureNumber, Range<std::uint8_t const> range) :
-		base(segment, procedureNumber, range),
+	PcodeProcedure::PcodeProcedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range) :
+		base(codePart, procedureNumber, range),
 		rawAttributeTable{ reinterpret_cast<RawPcodeAttributeTable const *>(data.end() - sizeof(RawPcodeAttributeTable)) }
 	{}
 
