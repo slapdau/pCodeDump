@@ -39,6 +39,20 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
+	struct SegmentDictionary {
+		struct {
+			boost::endian::little_int16_t codeaddr;
+			boost::endian::little_int16_t codeleng;
+		} diskInfo[16];
+		char segName[16][8];
+		boost::endian::little_int16_t segKind[16];
+		boost::endian::little_int16_t textAddr[16];
+		boost::endian::little_int16_t segInfo[16];
+		boost::endian::little_uint64_t intrinsicSegs;
+		boost::endian::little_uint16_t filler[68];
+		char comment[80];
+	};
+
 	map<SegmentKind, wstring> segKind = {
 		{SegmentKind::linked,          L"LINKED"},
 		{SegmentKind::hostseg,         L"HOSTSEG"},
@@ -226,8 +240,7 @@ namespace pcodedump {
 			sort(begin(segmentStarts), end(segmentStarts), [](const auto &left, const auto &right) { return get<1>(left) < get<1>(right); });
 			vector<tuple<int, int>> result;
 			for (unsigned int index = 0; index != segmentStarts.size() - 1; ++index) {
-				int directoryIndex, segmentStart;
-				tie(directoryIndex, segmentStart) = segmentStarts[index];
+				auto [directoryIndex, segmentStart] = segmentStarts[index];
 				// If the segment start is zero it's a data segment.  Retain that information with a 0 for the end.
 				if (segmentStart) {
 					int nextSegmentStart;
@@ -238,8 +251,7 @@ namespace pcodedump {
 				}
 			}
 			{
-				int directoryIndex, segmentStart;
-				tie(directoryIndex, segmentStart) = segmentStarts[segmentStarts.size() - 1];
+				auto[directoryIndex, segmentStart] = segmentStarts[segmentStarts.size() - 1];
 				int end = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
 				result.push_back(make_tuple(directoryIndex, end));
 			}

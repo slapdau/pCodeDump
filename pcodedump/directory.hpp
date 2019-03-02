@@ -55,19 +55,7 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
-	struct SegmentDictionary {
-		struct {
-			boost::endian::little_int16_t codeaddr;
-			boost::endian::little_int16_t codeleng;
-		} diskInfo[16];
-		char segName[16][8];
-		boost::endian::little_int16_t segKind[16];
-		boost::endian::little_int16_t textAddr[16];
-		boost::endian::little_int16_t segInfo[16];
-		boost::endian::little_uint64_t intrinsicSegs;
-		boost::endian::little_uint16_t filler[68];
-		char comment[80];
-	};
+	class SegmentDictionary;
 
 	class CodePart;
 	class InterfaceText;
