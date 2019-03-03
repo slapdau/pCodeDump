@@ -101,15 +101,6 @@ namespace pcodedump {
 	private:
 		
 		void writeHeader(std::wostream& os) const;
-
-		bool hasPcode() const {
-			return dictionaryEntry.machineType() == MachineType::pcode_little && dictionaryEntry.segmentKind() != SegmentKind::dataSeg;
-		}
-
-		bool has6502code() const {
-			return dictionaryEntry.machineType() == MachineType::native_m6502 && dictionaryEntry.segmentKind() != SegmentKind::dataSeg;
-		}
-
 		std::unique_ptr<CodePart> createCodePart();
 		std::unique_ptr<InterfaceText> createInterfaceText();
 		std::unique_ptr<LinkageInfo> createLinkageInfo();

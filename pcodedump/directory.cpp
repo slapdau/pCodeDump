@@ -160,15 +160,9 @@ namespace pcodedump {
 	{
 	}
 
-	/* Create a new correctly subtyped code segment object if this directory entry has code (everything except data segments). */
 	unique_ptr<CodePart> Segment::createCodePart() {
-		if (hasPcode()) {
-			return make_unique<CodePart>(*this, buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE, dictionaryEntry.codeLength());
-		} else if (has6502code()) {
-			return make_unique<CodePart>(*this, buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE, dictionaryEntry.codeLength());
-		} else {
-			return unique_ptr<CodePart>(nullptr);
-		}
+		assert(dictionaryEntry.codeAddress());
+		return make_unique<CodePart>(*this, buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE, dictionaryEntry.codeLength());
 	}
 
 	/* Create a new interface text segment if this directry entry points to one. */
