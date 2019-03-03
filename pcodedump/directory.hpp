@@ -61,7 +61,7 @@ namespace pcodedump {
 		friend class SegmentDictionary;
 	
 	private:
-		SegmentDictionaryEntry(SegmentDictionary const & segmentDictionary, int index);
+		SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index);
 
 	public:
 		int codeAddress() const;
@@ -72,9 +72,11 @@ namespace pcodedump {
 		int segmentNumber() const;
 		MachineType machineType() const;
 		int version() const;
+
+		int startAddress() const;
 	private:
-		SegmentDictionary const & segmentDictionary;
-		int const index;
+		SegmentDictionary const * segmentDictionary;
+		int index;
 	};
 
 	class CodePart;
@@ -93,7 +95,7 @@ namespace pcodedump {
 		}
 
 		int getFirstBlock() const {
-			return dictionaryEntry.textAddress() ? dictionaryEntry.textAddress() : dictionaryEntry.codeAddress();
+			return dictionaryEntry.startAddress();
 		}
 
 	private:
@@ -126,18 +128,17 @@ namespace pcodedump {
 	using Segments = std::vector<std::shared_ptr<Segment>>;
 
 	class PcodeFile {
-
 		friend std::wostream& operator<<(std::wostream&, const PcodeFile&);
+
 	public:
 		PcodeFile(buff_t const & buffer);
 
 	private:
-		auto getSegmentEnds();
 		std::unique_ptr<Segments> extractSegments();
+	
 	private:
 		buff_t const & buffer;
 		SegmentDictionary const & segmentDictionary;
-	public:
 		std::unique_ptr<Segments> segments;
 	};
 

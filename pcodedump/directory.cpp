@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
+#include <functional>
 
 using namespace std;
 using namespace boost::endian;
@@ -72,43 +73,47 @@ namespace pcodedump {
 	}
 
 	SegmentDictionaryEntry const SegmentDictionary::operator[](int index) const {
-		return SegmentDictionaryEntry{ *this, index };
+		return SegmentDictionaryEntry{ this, index };
 	}
 
-	SegmentDictionaryEntry::SegmentDictionaryEntry(SegmentDictionary const & segmentDictionary, int index) :
+	SegmentDictionaryEntry::SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index) :
 		segmentDictionary{ segmentDictionary }, index{ index }
 	{}
 
 	int SegmentDictionaryEntry::codeAddress() const {
-		return segmentDictionary.diskInfo[index].codeaddr;
+		return segmentDictionary->diskInfo[index].codeaddr;
 	}
 
 	int SegmentDictionaryEntry::codeLength() const {
-		return segmentDictionary.diskInfo[index].codeleng;
+		return segmentDictionary->diskInfo[index].codeleng;
 	}
 
 	std::wstring SegmentDictionaryEntry::name() const {
-		return wstring{ segmentDictionary.segName[index], segmentDictionary.segName[index] + 8 };
+		return wstring{ segmentDictionary->segName[index], segmentDictionary->segName[index] + 8 };
 	}
 
 	int SegmentDictionaryEntry::textAddress() const {
-		return segmentDictionary.textAddr[index];
+		return segmentDictionary->textAddr[index];
 	}
 
 	SegmentKind SegmentDictionaryEntry::segmentKind() const {
-		return static_cast<SegmentKind>(int{ segmentDictionary.segKind[index] });
+		return static_cast<SegmentKind>(int{ segmentDictionary->segKind[index] });
 	}
 
 	int SegmentDictionaryEntry::segmentNumber() const {
-		return int{ segmentDictionary.segInfo[index] } &0xff;
+		return int{ segmentDictionary->segInfo[index] } &0xff;
 	}
 
 	MachineType SegmentDictionaryEntry::machineType() const {
-		return static_cast<MachineType>(int{ segmentDictionary.segInfo[index] } >> 8 & 0xf);
+		return static_cast<MachineType>(int{ segmentDictionary->segInfo[index] } >> 8 & 0xf);
 	}
 
 	int SegmentDictionaryEntry::version() const {
-		return int{ segmentDictionary.segInfo[index] } >> 13 & 0x7;
+		return int{ segmentDictionary->segInfo[index] } >> 13 & 0x7;
+	}
+
+	int SegmentDictionaryEntry::startAddress() const {
+		return textAddress() ? textAddress() : codeAddress();
 	}
 
 	map<SegmentKind, wstring> segKind = {
@@ -258,7 +263,12 @@ namespace pcodedump {
 	{
 	}
 
-	/* Scan the directory and return a list of directory entry indexes that define segments, and
+
+	bool reverseAddress(SegmentDictionaryEntry const & left, SegmentDictionaryEntry const & right) {
+		return left.startAddress() > right.startAddress();
+	}
+
+	/* Scan the directory and return a list of segments, and
 	   and, if the segment has blocks of information in the file (everything except data segments),
 	   also return the segment end.
 
@@ -271,48 +281,24 @@ namespace pcodedump {
 	   Data blocks use 0 as a special value for the segment end. Segment block ranges are treated
 	   as [begin, end), so the block number returned is actually one block past the end block of
 	   the segment.  For the last segment in a file, this block number be past the end of the file. */
-	auto PcodeFile::getSegmentEnds() {
-		vector<tuple<int, int>> segmentStarts;
-		for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
-			auto dictionaryEntry = segmentDictionary[directoryIndex];
-			if (dictionaryEntry.codeLength()) {
-				int codeaddr = dictionaryEntry.codeAddress();
-				int textaddr = dictionaryEntry.textAddress();
-				segmentStarts.push_back(make_tuple(directoryIndex, textaddr != 0 ? textaddr : codeaddr));
-			}
-		}
-		// Sort by segment starts.  Data segments, which have no space allocated in file, have a start
-		// of 0 and are conveniently sorted to the start of vector out of the way.
-		sort(begin(segmentStarts), end(segmentStarts), [](const auto &left, const auto &right) { return get<1>(left) < get<1>(right); });
-		vector<tuple<int, int>> result;
-		for (unsigned int index = 0; index != segmentStarts.size() - 1; ++index) {
-			auto[directoryIndex, segmentStart] = segmentStarts[index];
-			// If the segment start is zero it's a data segment.  Retain that information with a 0 for the end.
-			if (segmentStart) {
-				int nextSegmentStart;
-				tie(ignore, nextSegmentStart) = segmentStarts[index + 1];
-				result.push_back(make_tuple(directoryIndex, nextSegmentStart));
-			} else {
-				result.push_back(make_tuple(directoryIndex, 0));
-			}
-		}
-		{
-			auto[directoryIndex, segmentStart] = segmentStarts[segmentStarts.size() - 1];
-			int end = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
-			result.push_back(make_tuple(directoryIndex, end));
-		}
-		// Sort by index number to restore the order in the segment directory.
-		sort(begin(result), end(result), [](const auto &left, const auto &right) { return get<0>(left) < get<0>(right); });
-		return result;
-	}
-
-	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
-	   directory entry slots will not be returned. */
 	unique_ptr<Segments> PcodeFile::extractSegments() {
-		auto segments = make_unique<Segments>();
-		for (auto [directoryIndex, segmentEnd] : getSegmentEnds()) {
-			segments->push_back(make_shared<Segment>(buffer, segmentDictionary[directoryIndex], segmentEnd));
+
+		vector<SegmentDictionaryEntry> dictionaryEntries;
+		for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
+			if (segmentDictionary[directoryIndex].codeAddress() != 0) {
+				dictionaryEntries.push_back(segmentDictionary[directoryIndex]);
+			}
 		}
+
+		sort(begin(dictionaryEntries), end(dictionaryEntries), reverseAddress);
+
+		auto segments = make_unique<Segments>();
+		int currentEnd = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
+		for (auto dictionaryEntry : dictionaryEntries) {
+			segments->push_back(make_shared<Segment>(buffer, dictionaryEntry, currentEnd));
+			currentEnd = dictionaryEntry.startAddress();
+		}
+
 		return segments;
 	}
 
