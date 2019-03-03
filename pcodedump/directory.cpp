@@ -62,7 +62,7 @@ namespace pcodedump {
 	}
 
 	int SegmentDictionaryEntry::codeLength() const {
-		return segmentDictionary.diskInfo[index].codeaddr;
+		return segmentDictionary.diskInfo[index].codeleng;
 	}
 
 	std::wstring SegmentDictionaryEntry::name() const {
@@ -70,7 +70,7 @@ namespace pcodedump {
 	}
 
 	int SegmentDictionaryEntry::textAddress() const {
-		segmentDictionary.textAddr[index];
+		return segmentDictionary.textAddr[index];
 	}
 
 	SegmentKind SegmentDictionaryEntry::segmentKind() const {
@@ -123,17 +123,10 @@ namespace pcodedump {
 		return os;
 	}
 
-	Segment::Segment(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock) :
+	Segment::Segment(buff_t const & buffer, SegmentDictionaryEntry dictionaryEntry, int endBlock) :
 		buffer{ buffer },
-		name{ segmentDictionary->segName[index], segmentDictionary->segName[index] + 8 },
-		textBlock{ segmentDictionary->textAddr[index] },
-		codeBlock{ segmentDictionary->diskInfo[index].codeaddr },
-		codeLength{ segmentDictionary->diskInfo[index].codeleng },
+		dictionaryEntry{ dictionaryEntry },
 		nextSegBlock{ endBlock },
-		segmentKind{ static_cast<SegmentKind>(int{ segmentDictionary->segKind[index] }) },
-		segmentNumber{ int{ segmentDictionary->segInfo[index] } &0xff },
-		machineType{ static_cast<MachineType>(int{ segmentDictionary->segInfo[index] } >> 8 & 0xf) },
-		version{ int{ segmentDictionary->segInfo[index] } >> 13 & 0x7 },
 		codePart{ createCodePart() },
 		interfaceText{ createInterfaceText() },
 		linkageInfo{ createLinkageInfo() }
@@ -143,9 +136,9 @@ namespace pcodedump {
 	/* Create a new correctly subtyped code segment object if this directory entry has code (everything except data segments). */
 	unique_ptr<CodePart> Segment::createCodePart() {
 		if (hasPcode()) {
-			return make_unique<CodePart>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
+			return make_unique<CodePart>(*this, buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE, dictionaryEntry.codeLength());
 		} else if (has6502code()) {
-			return make_unique<CodePart>(*this, buffer.data() + codeBlock * BLOCK_SIZE, codeLength);
+			return make_unique<CodePart>(*this, buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE, dictionaryEntry.codeLength());
 		} else {
 			return unique_ptr<CodePart>(nullptr);
 		}
@@ -153,8 +146,8 @@ namespace pcodedump {
 
 	/* Create a new interface text segment if this directry entry points to one. */
 	unique_ptr<InterfaceText> Segment::createInterfaceText() {
-		if (this->textBlock) {
-			return make_unique<InterfaceText>(*this, buffer.data() + textBlock * BLOCK_SIZE);
+		if (dictionaryEntry.textAddress()) {
+			return make_unique<InterfaceText>(*this, buffer.data() + dictionaryEntry.textAddress() * BLOCK_SIZE);
 		} else {
 			return unique_ptr<InterfaceText>(nullptr);
 		}
@@ -181,9 +174,9 @@ namespace pcodedump {
 	   The location of linkage data has to be inferred as the block following code data. */
 	unique_ptr<LinkageInfo> Segment::createLinkageInfo()
 	{
-		if (hasLinkage(this->segmentKind)) {
-			assert(this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock));
-			return make_unique<LinkageInfo>(*this, this->buffer.data() + (this->codeBlock + this->codeLength / BLOCK_SIZE + 1) * BLOCK_SIZE);
+		if (hasLinkage(getSegmentKind())) {
+			assert(dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock));
+			return make_unique<LinkageInfo>(*this, buffer.data() + (dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1) * BLOCK_SIZE);
 		} else {
 			return unique_ptr<LinkageInfo>(nullptr);
 		}
@@ -191,28 +184,28 @@ namespace pcodedump {
 
 	void Segment::writeHeader(std::wostream& os) const {
 		FmtSentry<wostream::char_type> sentry{ os };
-		os << "Segment " << dec << this->segmentNumber << L": ";
-		os << this->name << L" (" << this->segmentKind << L")" << endl;
+		os << "Segment " << dec << dictionaryEntry.segmentNumber() << L": ";
+		os << dictionaryEntry.name() << L" (" << dictionaryEntry.segmentKind() << L")" << endl;
 		os << L"   Text blocks : ";
-		if (this->textBlock) {
-			os << this->textBlock << L" - " << this->codeBlock - 1 << endl;
+		if (dictionaryEntry.textAddress()) {
+			os << dictionaryEntry.textAddress() << L" - " << dictionaryEntry.codeAddress() - 1 << endl;
 		} else {
 			os << L"-----" << endl;
 		}
 		os << L"   Code blocks : ";
-		if (this->codeBlock) {
-			os << this->codeBlock << L" - " << (this->codeBlock + this->codeLength / BLOCK_SIZE) << endl;
+		if (dictionaryEntry.codeAddress()) {
+			os << dictionaryEntry.codeAddress() << L" - " << (dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE) << endl;
 		} else {
 			os << L"-----" << endl;
 		}
 		os << L"   Link blocks : ";
-		if (this->codeBlock && this->codeBlock + this->codeLength / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock)) {
-			os << (this->codeBlock + this->codeLength / BLOCK_SIZE + 1) << L" - " << (this->nextSegBlock - 1) << endl;
+		if (dictionaryEntry.codeAddress() && dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock)) {
+			os << (dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1) << L" - " << (this->nextSegBlock - 1) << endl;
 		} else {
 			os << L"-----" << endl;
 		}
-		os << L"        Length : " << this->codeLength << endl;
-		os << L"  Segment info : version=" << this->version << ", mType=" << this->machineType << endl;
+		os << L"        Length : " << dictionaryEntry.codeLength() << endl;
+		os << L"  Segment info : version=" << dictionaryEntry.version() << ", mType=" << dictionaryEntry.machineType() << endl;
 		if (this->codePart.get() != nullptr) {
 			this->codePart->writeHeader(os);
 		}
@@ -303,7 +296,8 @@ namespace pcodedump {
 		auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
 		auto segments = make_unique<Segments>();
 		for (auto [directoryIndex, segmentEnd] : getSegmentEnds(buffer)) {
-			segments->push_back(make_shared<Segment>(buffer, segmentDictionary, directoryIndex, segmentEnd));
+			SegmentDictionaryEntry dictionaryEntry{ *segmentDictionary, directoryIndex };
+			segments->push_back(make_shared<Segment>(buffer, dictionaryEntry, segmentEnd));
 		}
 		return segments;
 	}

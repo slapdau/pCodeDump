@@ -55,7 +55,7 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
-	class SegmentDictionary;
+	struct SegmentDictionary;
 
 	class SegmentDictionaryEntry {
 	public:
@@ -71,10 +71,8 @@ namespace pcodedump {
 		int version() const;
 	private:
 		SegmentDictionary const & segmentDictionary;
-		int index;
+		int const index;
 	};
-
-	class SegmentDictionary;
 
 	class CodePart;
 	class InterfaceText;
@@ -83,16 +81,16 @@ namespace pcodedump {
 	class Segment {
 		friend std::wostream& operator<<(std::wostream&, const Segment&);
 	public:
-		Segment(buff_t const & buffer, SegmentDictionary const * segmentDictionary, int index, int endBlock);
+		Segment(buff_t const & buffer, SegmentDictionaryEntry dictionaryEntry, int endBlock);
 
 	public:
 
 		SegmentKind getSegmentKind() const {
-			return segmentKind;
+			return dictionaryEntry.segmentKind();
 		}
 
 		int getFirstBlock() const {
-			return textBlock ? textBlock : codeBlock;
+			return dictionaryEntry.textAddress() ? dictionaryEntry.textAddress() : dictionaryEntry.codeAddress();
 		}
 
 	private:
@@ -100,11 +98,11 @@ namespace pcodedump {
 		void writeHeader(std::wostream& os) const;
 
 		bool hasPcode() const {
-			return machineType == MachineType::pcode_little && segmentKind != SegmentKind::dataSeg;
+			return dictionaryEntry.machineType() == MachineType::pcode_little && dictionaryEntry.segmentKind() != SegmentKind::dataSeg;
 		}
 
 		bool has6502code() const {
-			return machineType == MachineType::native_m6502 && segmentKind != SegmentKind::dataSeg;
+			return dictionaryEntry.machineType() == MachineType::native_m6502 && dictionaryEntry.segmentKind() != SegmentKind::dataSeg;
 		}
 
 		std::unique_ptr<CodePart> createCodePart();
@@ -113,15 +111,8 @@ namespace pcodedump {
 
 	protected:
 		buff_t const & buffer;
-		std::wstring name;
-		int textBlock;
-		int codeBlock;
-		int codeLength;
+		SegmentDictionaryEntry const dictionaryEntry;
 		int nextSegBlock;
-		SegmentKind segmentKind;
-		int segmentNumber;
-		MachineType machineType;
-		int version;
 		std::unique_ptr<CodePart> codePart;
 		std::unique_ptr<InterfaceText> interfaceText;
 		std::unique_ptr<LinkageInfo> linkageInfo;
