@@ -55,12 +55,15 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
-	struct SegmentDictionary;
+	class SegmentDictionary;
 
 	class SegmentDictionaryEntry {
-	public:
+		friend class SegmentDictionary;
+	
+	private:
 		SegmentDictionaryEntry(SegmentDictionary const & segmentDictionary, int index);
 
+	public:
 		int codeAddress() const;
 		int codeLength() const;
 		std::wstring name() const;
@@ -81,7 +84,7 @@ namespace pcodedump {
 	class Segment {
 		friend std::wostream& operator<<(std::wostream&, const Segment&);
 	public:
-		Segment(buff_t const & buffer, SegmentDictionaryEntry dictionaryEntry, int endBlock);
+		Segment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
 
 	public:
 
@@ -136,7 +139,6 @@ namespace pcodedump {
 	public:
 		std::unique_ptr<Segments> segments;
 		std::uint64_t intrinsicLibraries;
-		std::wstring comment;
 	};
 
 	std::wostream& operator<<(std::wostream& os, const PcodeFile& value);

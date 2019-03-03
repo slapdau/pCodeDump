@@ -39,7 +39,16 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	struct SegmentDictionary {
+	class SegmentDictionary {
+	public:
+		friend class SegmentDictionaryEntry;
+
+		uint64_t intrinsicSegments() const;
+		std::wstring fileComment() const;
+
+		SegmentDictionaryEntry const operator[](int index) const;
+
+	private:
 		struct {
 			boost::endian::little_int16_t codeaddr;
 			boost::endian::little_int16_t codeleng;
@@ -52,6 +61,19 @@ namespace pcodedump {
 		boost::endian::little_uint16_t filler[68];
 		char comment[80];
 	};
+
+	uint64_t SegmentDictionary::intrinsicSegments() const {
+		return intrinsicSegs;
+	}
+
+	std::wstring SegmentDictionary::fileComment() const {
+		int size = comment[0];
+		return wstring{ comment + 1, comment + 1 + size };
+	}
+
+	SegmentDictionaryEntry const SegmentDictionary::operator[](int index) const {
+		return SegmentDictionaryEntry{ *this, index };
+	}
 
 	SegmentDictionaryEntry::SegmentDictionaryEntry(SegmentDictionary const & segmentDictionary, int index) :
 		segmentDictionary{ segmentDictionary }, index{ index }
@@ -123,7 +145,7 @@ namespace pcodedump {
 		return os;
 	}
 
-	Segment::Segment(buff_t const & buffer, SegmentDictionaryEntry dictionaryEntry, int endBlock) :
+	Segment::Segment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		buffer{ buffer },
 		dictionaryEntry{ dictionaryEntry },
 		nextSegBlock{ endBlock },
@@ -233,10 +255,8 @@ namespace pcodedump {
 		buffer{ buffer },
 		segmentDictionary{ reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
 		segments{ extractSegments() },
-		intrinsicLibraries{ segmentDictionary->intrinsicSegs }
+		intrinsicLibraries{ segmentDictionary->intrinsicSegments() }
 	{
-		int size = segmentDictionary->comment[0];
-		comment = wstring{ segmentDictionary->comment + 1, segmentDictionary->comment + 1 + size };
 	}
 
 	namespace {
@@ -255,12 +275,13 @@ namespace pcodedump {
 		   as [begin, end), so the block number returned is actually one block past the end block of
 		   the segment.  For the last segment in a file, this block number be past the end of the file. */
 		auto getSegmentEnds(buff_t const & buffer) {
-			auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
+			auto & segmentDictionary = *reinterpret_cast<SegmentDictionary const *>(buffer.data());
 			vector<tuple<int, int>> segmentStarts;
 			for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
-				if (segmentDictionary->diskInfo[directoryIndex].codeleng) {
-					int codeaddr = segmentDictionary->diskInfo[directoryIndex].codeaddr;
-					int textaddr = segmentDictionary->textAddr[directoryIndex];
+				auto dictionaryEntry = segmentDictionary[directoryIndex];
+				if (dictionaryEntry.codeLength()) {
+					int codeaddr = dictionaryEntry.codeAddress();
+					int textaddr = dictionaryEntry.textAddress();
 					segmentStarts.push_back(make_tuple(directoryIndex, textaddr != 0 ? textaddr : codeaddr));
 				}
 			}
@@ -293,11 +314,10 @@ namespace pcodedump {
 	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
 	   directory entry slots will not be returned. */
 	unique_ptr<Segments> PcodeFile::extractSegments() {
-		auto segmentDictionary = reinterpret_cast<SegmentDictionary const *>(buffer.data());
+		auto & segmentDictionary = *reinterpret_cast<SegmentDictionary const *>(buffer.data());
 		auto segments = make_unique<Segments>();
 		for (auto [directoryIndex, segmentEnd] : getSegmentEnds(buffer)) {
-			SegmentDictionaryEntry dictionaryEntry{ *segmentDictionary, directoryIndex };
-			segments->push_back(make_shared<Segment>(buffer, dictionaryEntry, segmentEnd));
+			segments->push_back(make_shared<Segment>(buffer, segmentDictionary[directoryIndex], segmentEnd));
 		}
 		return segments;
 	}
@@ -324,16 +344,16 @@ namespace pcodedump {
 		}
 	}
 
-	std::wostream& operator<<(std::wostream& os, const PcodeFile& value) {
+	std::wostream& operator<<(std::wostream& os, const PcodeFile& file) {
 		FmtSentry<wostream::char_type> sentry{ os };
-		wcout << "Total blocks: " << (value.buffer.size() - 1) / BLOCK_SIZE + 1 << endl;
-		wstring comment = value.comment;
+		wcout << "Total blocks: " << (file.buffer.size() - 1) / BLOCK_SIZE + 1 << endl;
+		wstring comment = file.segmentDictionary->fileComment();
 		transform(begin(comment), end(comment), begin(comment), [](const auto &c) { return 32 <= c && c <= 126 ? c : L'.'; });
 		os << L"Comment: " << comment << endl;
-		writeIntrinsicUnits(os, value.intrinsicLibraries);
+		writeIntrinsicUnits(os, file.intrinsicLibraries);
 		os << endl;
 		Segments segments;
-		copy(begin(*value.segments), end(*value.segments), back_inserter(segments));
+		copy(begin(*file.segments), end(*file.segments), back_inserter(segments));
 		if (addressOrder) {
 			sort(begin(segments), end(segments), [](const auto &left, const auto &right) { return left->getFirstBlock() < right->getFirstBlock(); });
 		}
