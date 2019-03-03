@@ -132,13 +132,13 @@ namespace pcodedump {
 		PcodeFile(buff_t const & buffer);
 
 	private:
+		auto getSegmentEnds();
 		std::unique_ptr<Segments> extractSegments();
 	private:
 		buff_t const & buffer;
-		SegmentDictionary const * segmentDictionary;
+		SegmentDictionary const & segmentDictionary;
 	public:
 		std::unique_ptr<Segments> segments;
-		std::uint64_t intrinsicLibraries;
 	};
 
 	std::wostream& operator<<(std::wostream& os, const PcodeFile& value);

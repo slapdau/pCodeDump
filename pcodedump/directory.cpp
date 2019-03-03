@@ -253,70 +253,64 @@ namespace pcodedump {
 
 	PcodeFile::PcodeFile(buff_t const & buffer) :
 		buffer{ buffer },
-		segmentDictionary{ reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
-		segments{ extractSegments() },
-		intrinsicLibraries{ segmentDictionary->intrinsicSegments() }
+		segmentDictionary{ *reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
+		segments{ extractSegments() }
 	{
 	}
 
-	namespace {
+	/* Scan the directory and return a list of directory entry indexes that define segments, and
+	   and, if the segment has blocks of information in the file (everything except data segments),
+	   also return the segment end.
 
-		/* Scan the directory and return a list of directory entry indexes that define segments, and
-		   and, if the segment has blocks of information in the file (everything except data segments),
-		   also return the segment end.
+	   The main reason for doing this is that the directory entry objects need to be able to write
+	   block ranges for linkage information, but these block ranges are inferred from the gaps
+	   between the end of code in one segment and the start of the next segment.  Directory entries
+	   are self contained and don't refer to each other.  So the inferred endings for each segment
+	   are calculated and passed to directory entry constructors.
 
-		   The main reason for doing this is that the directory entry objects need to be able to write
-		   block ranges for linkage information, but these block ranges are inferred from the gaps
-		   between the end of code in one segment and the start of the next segment.  Directory entries
-		   are self contained and don't refer to each other.  So the inferred endings for each segment
-		   are calculated and passed to directory entry constructors.
-		   
-		   Data blocks use 0 as a special value for the segment end. Segment block ranges are treated
-		   as [begin, end), so the block number returned is actually one block past the end block of
-		   the segment.  For the last segment in a file, this block number be past the end of the file. */
-		auto getSegmentEnds(buff_t const & buffer) {
-			auto & segmentDictionary = *reinterpret_cast<SegmentDictionary const *>(buffer.data());
-			vector<tuple<int, int>> segmentStarts;
-			for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
-				auto dictionaryEntry = segmentDictionary[directoryIndex];
-				if (dictionaryEntry.codeLength()) {
-					int codeaddr = dictionaryEntry.codeAddress();
-					int textaddr = dictionaryEntry.textAddress();
-					segmentStarts.push_back(make_tuple(directoryIndex, textaddr != 0 ? textaddr : codeaddr));
-				}
+	   Data blocks use 0 as a special value for the segment end. Segment block ranges are treated
+	   as [begin, end), so the block number returned is actually one block past the end block of
+	   the segment.  For the last segment in a file, this block number be past the end of the file. */
+	auto PcodeFile::getSegmentEnds() {
+		vector<tuple<int, int>> segmentStarts;
+		for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
+			auto dictionaryEntry = segmentDictionary[directoryIndex];
+			if (dictionaryEntry.codeLength()) {
+				int codeaddr = dictionaryEntry.codeAddress();
+				int textaddr = dictionaryEntry.textAddress();
+				segmentStarts.push_back(make_tuple(directoryIndex, textaddr != 0 ? textaddr : codeaddr));
 			}
-			// Sort by segment starts.  Data segments, which have no space allocated in file, have a start
-			// of 0 and are conveniently sorted to the start of vector out of the way.
-			sort(begin(segmentStarts), end(segmentStarts), [](const auto &left, const auto &right) { return get<1>(left) < get<1>(right); });
-			vector<tuple<int, int>> result;
-			for (unsigned int index = 0; index != segmentStarts.size() - 1; ++index) {
-				auto [directoryIndex, segmentStart] = segmentStarts[index];
-				// If the segment start is zero it's a data segment.  Retain that information with a 0 for the end.
-				if (segmentStart) {
-					int nextSegmentStart;
-					tie(ignore, nextSegmentStart) = segmentStarts[index + 1];
-					result.push_back(make_tuple(directoryIndex, nextSegmentStart));
-				} else {
-					result.push_back(make_tuple(directoryIndex, 0));
-				}
-			}
-			{
-				auto[directoryIndex, segmentStart] = segmentStarts[segmentStarts.size() - 1];
-				int end = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
-				result.push_back(make_tuple(directoryIndex, end));
-			}
-			// Sort by index number to restore the order in the segment directory.
-			sort(begin(result), end(result), [](const auto &left, const auto &right) { return get<0>(left) < get<0>(right); });
-			return result;
 		}
+		// Sort by segment starts.  Data segments, which have no space allocated in file, have a start
+		// of 0 and are conveniently sorted to the start of vector out of the way.
+		sort(begin(segmentStarts), end(segmentStarts), [](const auto &left, const auto &right) { return get<1>(left) < get<1>(right); });
+		vector<tuple<int, int>> result;
+		for (unsigned int index = 0; index != segmentStarts.size() - 1; ++index) {
+			auto[directoryIndex, segmentStart] = segmentStarts[index];
+			// If the segment start is zero it's a data segment.  Retain that information with a 0 for the end.
+			if (segmentStart) {
+				int nextSegmentStart;
+				tie(ignore, nextSegmentStart) = segmentStarts[index + 1];
+				result.push_back(make_tuple(directoryIndex, nextSegmentStart));
+			} else {
+				result.push_back(make_tuple(directoryIndex, 0));
+			}
+		}
+		{
+			auto[directoryIndex, segmentStart] = segmentStarts[segmentStarts.size() - 1];
+			int end = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
+			result.push_back(make_tuple(directoryIndex, end));
+		}
+		// Sort by index number to restore the order in the segment directory.
+		sort(begin(result), end(result), [](const auto &left, const auto &right) { return get<0>(left) < get<0>(right); });
+		return result;
 	}
 
 	/* Create a list of directory entries for defined segments in the order they are in the directory.  Unused
 	   directory entry slots will not be returned. */
 	unique_ptr<Segments> PcodeFile::extractSegments() {
-		auto & segmentDictionary = *reinterpret_cast<SegmentDictionary const *>(buffer.data());
 		auto segments = make_unique<Segments>();
-		for (auto [directoryIndex, segmentEnd] : getSegmentEnds(buffer)) {
+		for (auto [directoryIndex, segmentEnd] : getSegmentEnds()) {
 			segments->push_back(make_shared<Segment>(buffer, segmentDictionary[directoryIndex], segmentEnd));
 		}
 		return segments;
@@ -347,10 +341,10 @@ namespace pcodedump {
 	std::wostream& operator<<(std::wostream& os, const PcodeFile& file) {
 		FmtSentry<wostream::char_type> sentry{ os };
 		wcout << "Total blocks: " << (file.buffer.size() - 1) / BLOCK_SIZE + 1 << endl;
-		wstring comment = file.segmentDictionary->fileComment();
+		wstring comment = file.segmentDictionary.fileComment();
 		transform(begin(comment), end(comment), begin(comment), [](const auto &c) { return 32 <= c && c <= 126 ? c : L'.'; });
 		os << L"Comment: " << comment << endl;
-		writeIntrinsicUnits(os, file.intrinsicLibraries);
+		writeIntrinsicUnits(os, file.segmentDictionary.intrinsicSegments());
 		os << endl;
 		Segments segments;
 		copy(begin(*file.segments), end(*file.segments), back_inserter(segments));
