@@ -17,7 +17,6 @@
 #include "directory.hpp"
 #include "types.hpp"
 #include "options.hpp"
-#include "native6502.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -49,7 +48,6 @@ main(int argc, char *argv[], char *envp[]) {
 
 	try {
 		if (parseOptions(argc, argv, envp)) {
-			Native6502Procedure::initialiseCpu();
 			auto buffer = readFile(filename);
 			PcodeFile file{*buffer};
 			wcout << file;

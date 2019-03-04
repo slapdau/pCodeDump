@@ -19,6 +19,7 @@
 
 #include "basecode.hpp"
 #include "types.hpp"
+#include "options.hpp"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -40,7 +41,7 @@ namespace pcodedump {
 		using base = Procedure;
 		Native6502Procedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range);
 
-		static void initialiseCpu();
+		static void initialiseCpu(cpu_t const &);
 
 		void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const;
 		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;

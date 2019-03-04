@@ -22,10 +22,12 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <functional>
 
 #include <boost/program_options.hpp>
 
 #include "options.hpp"
+#include "native6502.hpp"
 
 using namespace std;
 
@@ -37,7 +39,6 @@ namespace pcodedump {
 	bool addressOrder;
 	bool disasmProcs;
 	string filename;
-	cpu_t cpu;
 
 	namespace {
 		map<string, cpu_t> string_to_cpu = {
@@ -83,7 +84,7 @@ namespace pcodedump {
 				("text", bool_switch(&showText), "Display interface text")
 				("procs", bool_switch(&listProcs), "Display segment procedures")
 				("disasm", bool_switch(&disasmProcs), "Display code disassembly (implies procs)")
-				("cpu", value<cpu_t>(&cpu)->default_value(cpu_t::_6502),
+				("cpu", value<cpu_t>()->default_value(cpu_t::_6502)->notifier(Native6502Procedure::initialiseCpu),
 					"CPU type for disassembled native code:\n"
 					"  6502\n"
 					"  65c02")

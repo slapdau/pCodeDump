@@ -24,6 +24,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <iostream>
 
 using namespace std;
 using namespace boost::endian;
@@ -419,7 +420,7 @@ namespace pcodedump {
 	};
 
 	/* Check the nominated CPU type, and patch the opcode decoding dispatch table if necessary. */
-	void Native6502Procedure::initialiseCpu() {
+	void Native6502Procedure::initialiseCpu(cpu_t const & cpu) {
 		if (cpu == cpu_t::_65c02) {
 			for (auto[instruction, dispatchUpdate] : dispatch_65c02) {
 				dispatch[instruction] = dispatchUpdate;
