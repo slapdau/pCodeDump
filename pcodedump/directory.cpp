@@ -262,6 +262,10 @@ namespace pcodedump {
 		return left.startAddress() > right.startAddress();
 	}
 
+	bool index(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
+		return left->getDictionaryIndex() > right->getDictionaryIndex();
+	}
+
 	/* Scan the directory and return a list of segments, and
 	   and, if the segment has blocks of information in the file (everything except data segments),
 	   also return the segment end.
@@ -292,6 +296,8 @@ namespace pcodedump {
 			segments->push_back(make_shared<Segment>(buffer, dictionaryEntry, currentEnd));
 			currentEnd = dictionaryEntry.startAddress();
 		}
+
+		sort(begin(*segments), end(*segments), index);
 
 		return segments;
 	}

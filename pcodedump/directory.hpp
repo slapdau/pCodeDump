@@ -64,6 +64,7 @@ namespace pcodedump {
 		SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index);
 
 	public:
+		int getIndex() const { return index;  }
 		int codeAddress() const;
 		int codeLength() const;
 		std::wstring name() const;
@@ -89,6 +90,10 @@ namespace pcodedump {
 		Segment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
 
 	public:
+
+		int getDictionaryIndex() const {
+			return dictionaryEntry.getIndex();
+		}
 
 		SegmentKind getSegmentKind() const {
 			return dictionaryEntry.segmentKind();
