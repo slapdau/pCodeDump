@@ -321,9 +321,6 @@ namespace pcodedump {
 	}
 
 	void PcodeProcedure::disassemble(uint8_t const * segBegin, std::wostream& os) const {
-		if (!rawAttributeTable->procedureNumber) {
-			return;
-		}
 		uint8_t const * ic = data.begin();
 		while (ic && ic < data.end()) {
 			
@@ -530,8 +527,10 @@ namespace pcodedump {
 			{ 22, L"relseg" },
 			{ 23, L"trunc" },
 			{ 24, L"round" },
-	#if 0
-			// These are actually implemented in the transcendental intrinsic unit.
+#if 1
+			// These are standard UCSD p-code standard procedures that are not implemented
+			// in Apple Pascal, which instead provides them in the transcendental intrinsic unit.
+			// Left in because it doesn't seem to hurt.
 			{ 25, L"sine" },
 			{ 26, L"cos" },
 			{ 27, L"log" },
@@ -539,7 +538,7 @@ namespace pcodedump {
 			{ 29, L"ln" },
 			{ 30, L"exp" },
 			{ 31, L"sqrt" },
-	#endif
+#endif
 			{ 32, L"mark" },
 			{ 33, L"release" },
 			{ 34, L"ioresult" },
