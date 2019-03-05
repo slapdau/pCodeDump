@@ -80,9 +80,7 @@ namespace pcodedump {
 
 	private:
 		using Procedures = std::vector<std::shared_ptr<Procedure const>>;
-
-		std::map<int, Range<std::uint8_t const>> getProcRanges();
-		std::unique_ptr<Procedures> initProcedures();
+		std::unique_ptr<Procedures> extractProcedures();
 
 	private:
 		Range<std::uint8_t const> data;

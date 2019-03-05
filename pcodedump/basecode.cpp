@@ -61,32 +61,8 @@ namespace pcodedump {
 	CodePart::CodePart(Segment & segment, std::uint8_t const * segBegin, int segLength) :
 		data{segBegin, segBegin+segLength },
 		procDict{ ProcedureDictionary::place(segBegin, segLength) },
-		procedures { initProcedures() }
+		procedures { extractProcedures() }
 	{
-	}
-
-	/* Gets a vector of the procedure ranges in this code segment.  The tuples are
-		- procedure number
-		- Pointer to start
-		- Length
-	   The procedure pointers in the segment point to the end of each pointer.  In
-	   memory this works well for the P-machine, but for disassembling the procedures
-	   we need to begin at the start. Once the ranges are known, an object for each
-	   procedure will be constructed with the full information. */
-	map<int, Range<uint8_t const>> CodePart::getProcRanges() {
-		map<uint8_t const *, int> procEnds;
-		for (int index = 0; index != procDict.numProcedures; ++index) {
-			procEnds[procDict[index]] = index;
-		}
-
-		auto currentStart = begin();
-		map<int, Range<std::uint8_t const>> procRanges;
-		for (auto [end, procNumber] : procEnds) {
-			procRanges[procNumber] = Range(currentStart, end);
-			currentStart = end;
-		}
-
-		return procRanges;
 	}
 
 	Procedure const * CodePart::findProcedure(std::uint8_t const * address) const {
@@ -98,26 +74,8 @@ namespace pcodedump {
 		}
 	}
 
-
 	void CodePart::writeHeader(std::wostream& os) const {
 		os << L"    Procedures : " << procDict.numProcedures << endl;
-	}
-
-
-	/* Get the procedure code memory ranges and construct a vector of procedure objedts. P-code segments only
-	   have p-code procedures. */
-	unique_ptr<CodePart::Procedures> CodePart::initProcedures() {
-		auto procRanges = getProcRanges();
-		auto result = make_unique<Procedures>();
-		transform(std::begin(procRanges), std::end(procRanges), back_inserter(*result), [this](const auto & value) ->shared_ptr<Procedure const> {
-			auto[procNumber, range] = value;
-			if (*(range.end() - 2)) {
-				return make_shared<PcodeProcedure>(*this, procNumber + 1, range);
-			} else {
-				return make_shared<Native6502Procedure>(*this, procNumber + 1, range);
-			}
-		});
-		return result;
 	}
 
 	void CodePart::disassemble(std::wostream& os) const {
@@ -132,6 +90,32 @@ namespace pcodedump {
 				os << endl;
 			}
 		}
+	}
+
+	/* Get the procedure code memory ranges and construct a vector of procedure objedts.
+	   The procedure pointers in the segment point to the end of each pointer.  In
+	   memory this works well for the P-machine, but for disassembling the procedures
+	   we need to begin at the start. Once the ranges are known, an object for each
+	   procedure will be constructed with the full information.*/
+	unique_ptr<CodePart::Procedures> CodePart::extractProcedures() {
+		map<uint8_t const *, int> procEnds;
+		for (int index = 0; index != procDict.numProcedures; ++index) {
+			procEnds[procDict[index]] = index;
+		}
+
+		auto result = make_unique<Procedures>();
+		auto currentStart = begin();
+		for (auto[end, procNumber] : procEnds) {
+			Range range(currentStart, end);
+			if (*(range.end() - 2)) {
+				result->push_back(make_shared<PcodeProcedure>(*this, procNumber + 1, range));
+			} else {
+				result->push_back(make_shared<Native6502Procedure>(*this, procNumber + 1, range));
+			}
+			currentStart = end;
+		}
+
+		return result;
 	}
 
 }
