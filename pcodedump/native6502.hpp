@@ -32,7 +32,7 @@ namespace pcodedump {
 
 	class Native6502Procedure : public Procedure {
 
-		struct RawNative6502AttributeTable {
+		struct AttributeTable {
 			boost::endian::little_uint16_t enterIc;
 			boost::endian::little_uint8_t procedureNumber;
 			boost::endian::little_uint8_t relocationSeg;
@@ -76,7 +76,7 @@ namespace pcodedump {
 		static std::vector<dispatch_t> dispatch;
 		static std::map<int, dispatch_t> dispatch_65c02;
 
-		RawNative6502AttributeTable const * rawAttributeTable;
+		AttributeTable const * attributeTable;
 		uint8_t const * procEnd;
 
 		std::wstring formatAbsoluteAddress(std::uint8_t const * address) const;

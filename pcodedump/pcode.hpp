@@ -32,7 +32,7 @@ namespace pcodedump {
 
 	class PcodeProcedure : public Procedure {
 
-		struct RawPcodeAttributeTable {
+		struct AttributeTable {
 			boost::endian::little_uint16_t jumpTableStart;
 			boost::endian::little_uint16_t dataSize;
 			boost::endian::little_uint16_t paramaterSize;
@@ -80,7 +80,7 @@ namespace pcodedump {
 		static std::vector<dispatch_t> dispatch;
 
 	private:
-		RawPcodeAttributeTable const * rawAttributeTable;
+		AttributeTable const * attributeTable;
 	};
 
 }

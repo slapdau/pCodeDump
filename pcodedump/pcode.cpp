@@ -33,7 +33,7 @@ namespace pcodedump {
 
 	PcodeProcedure::PcodeProcedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range) :
 		base(codePart, procedureNumber, range),
-		rawAttributeTable{ reinterpret_cast<RawPcodeAttributeTable const *>(data.end() - sizeof(RawPcodeAttributeTable)) }
+		attributeTable{ reinterpret_cast<AttributeTable const *>(data.end() - sizeof(AttributeTable)) }
 	{}
 
 	vector<PcodeProcedure::dispatch_t> PcodeProcedure::dispatch = {
@@ -297,15 +297,15 @@ namespace pcodedump {
 
 
 	std::uint8_t const * PcodeProcedure::getEnterIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&rawAttributeTable->enterIc));
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&attributeTable->enterIc));
 	}
 
 	std::uint8_t const * PcodeProcedure::getExitIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&rawAttributeTable->exitIc));
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&attributeTable->exitIc));
 	}
 
 	uint8_t const * PcodeProcedure::jtab(int index) const {
-		return reinterpret_cast<uint8_t const *>(&rawAttributeTable->procedureNumber) + index;
+		return reinterpret_cast<uint8_t const *>(&attributeTable->procedureNumber) + index;
 	}
 
 	void PcodeProcedure::writeHeader(uint8_t const * segBegin, std::wostream& os) const {
@@ -314,9 +314,9 @@ namespace pcodedump {
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
 		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ")  P-Code (LSB)   ";
 		os << setfill(L' ') << dec << left;
-		os << L"Lex level = " << setw(4) << rawAttributeTable->lexLevel;
-		os << L"Parameters = " << setw(4) << rawAttributeTable->paramaterSize;
-		os << L"Variables = " << setw(4) << rawAttributeTable->dataSize;
+		os << L"Lex level = " << setw(4) << attributeTable->lexLevel;
+		os << L"Parameters = " << setw(4) << attributeTable->paramaterSize;
+		os << L"Variables = " << setw(4) << attributeTable->dataSize;
 		os << endl;
 	}
 
