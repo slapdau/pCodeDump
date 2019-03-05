@@ -116,6 +116,10 @@ namespace pcodedump {
 		return textAddress() ? textAddress() : codeAddress();
 	}
 
+	int SegmentDictionaryEntry::linkageAddress() const {
+		return codeAddress() + codeLength() / BLOCK_SIZE + 1;
+	}
+
 	map<SegmentKind, wstring> segKind = {
 		{SegmentKind::linked,          L"LINKED"},
 		{SegmentKind::hostseg,         L"HOSTSEG"},
@@ -153,7 +157,7 @@ namespace pcodedump {
 	Segment::Segment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		buffer{ buffer },
 		dictionaryEntry{ dictionaryEntry },
-		nextSegBlock{ endBlock },
+		endBlock{ endBlock },
 		codePart{ createCodePart() },
 		interfaceText{ createInterfaceText() },
 		linkageInfo{ createLinkageInfo() }
@@ -174,30 +178,13 @@ namespace pcodedump {
 		}
 	}
 
-	namespace {
-
-		/* Predicate function to determine if a particular type of segment has linkage information.
-		   This will be segments output by the compiler or assembler that either export symbols
-		   or have unresolved symbolic references. */
-		bool hasLinkage(SegmentKind segmentKind) {
-			static set<SegmentKind> LINKAGE_SEGMENTS = {
-				SegmentKind::hostseg,
-				SegmentKind::unitseg,
-				SegmentKind::unlinkedIntrins,
-				SegmentKind::seprtseg,
-			};
-			return LINKAGE_SEGMENTS.find(segmentKind) != end(LINKAGE_SEGMENTS);
-		}
-
-	}
-
 	/* Create a new linkage segment if this directory entry has unlinked code.
 	   The location of linkage data has to be inferred as the block following code data. */
 	unique_ptr<LinkageInfo> Segment::createLinkageInfo()
 	{
-		if (hasLinkage(getSegmentKind())) {
-			assert(dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock));
-			return make_unique<LinkageInfo>(*this, buffer.data() + (dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1) * BLOCK_SIZE);
+		if (dictionaryEntry.linkageAddress() != this->endBlock) {
+			assert(dictionaryEntry.linkageAddress() != this->endBlock);
+			return make_unique<LinkageInfo>(*this, buffer.data() + dictionaryEntry.linkageAddress() * BLOCK_SIZE);
 		} else {
 			return unique_ptr<LinkageInfo>(nullptr);
 		}
@@ -215,13 +202,13 @@ namespace pcodedump {
 		}
 		os << L"   Code blocks : ";
 		if (dictionaryEntry.codeAddress()) {
-			os << dictionaryEntry.codeAddress() << L" - " << (dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE) << endl;
+			os << dictionaryEntry.codeAddress() << L" - " << dictionaryEntry.linkageAddress() - 1 << endl;
 		} else {
 			os << L"-----" << endl;
 		}
 		os << L"   Link blocks : ";
-		if (dictionaryEntry.codeAddress() && dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1 != static_cast<unsigned int>(this->nextSegBlock)) {
-			os << (dictionaryEntry.codeAddress() + dictionaryEntry.codeLength() / BLOCK_SIZE + 1) << L" - " << (this->nextSegBlock - 1) << endl;
+		if (dictionaryEntry.linkageAddress() != this->endBlock) {
+			os << dictionaryEntry.linkageAddress() << L" - " << this->endBlock - 1 << endl;
 		} else {
 			os << L"-----" << endl;
 		}

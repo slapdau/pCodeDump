@@ -76,6 +76,7 @@ namespace pcodedump {
 		int version() const;
 
 		int startAddress() const;
+		int linkageAddress() const;
 	private:
 		SegmentDictionary const * segmentDictionary;
 		int index;
@@ -114,7 +115,7 @@ namespace pcodedump {
 	protected:
 		buff_t const & buffer;
 		SegmentDictionaryEntry const dictionaryEntry;
-		int nextSegBlock;
+		int endBlock;
 		std::unique_ptr<CodePart> codePart;
 		std::unique_ptr<InterfaceText> interfaceText;
 		std::unique_ptr<LinkageInfo> linkageInfo;
