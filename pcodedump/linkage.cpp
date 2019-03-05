@@ -15,7 +15,7 @@
 */
 
 #include "linkage.hpp"
-#include "directory.hpp"
+#include "segment.hpp"
 #include <iostream>
 #include <string>
 #include <map>

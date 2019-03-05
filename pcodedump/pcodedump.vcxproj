@@ -164,7 +164,8 @@
     <ClInclude Include="native6502.hpp" />
     <ClInclude Include="options.hpp" />
     <ClInclude Include="pcode.hpp" />
-    <ClInclude Include="directory.hpp" />
+    <ClInclude Include="pcodefile.hpp" />
+    <ClInclude Include="segment.hpp" />
     <ClInclude Include="text.hpp" />
     <ClInclude Include="textio.hpp" />
     <ClInclude Include="types.hpp" />
@@ -176,7 +177,8 @@
     <ClCompile Include="options.cpp" />
     <ClCompile Include="pcode.cpp" />
     <ClCompile Include="pcodedump.cpp" />
-    <ClCompile Include="directory.cpp" />
+    <ClCompile Include="pcodefile.cpp" />
+    <ClCompile Include="segment.cpp" />
     <ClCompile Include="text.cpp" />
     <ClCompile Include="textio.cpp" />
   </ItemGroup>

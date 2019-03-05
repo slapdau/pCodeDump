@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-#include "directory.hpp"
+#include "segment.hpp"
 #include "native6502.hpp"
 #include "pcode.hpp"
 #include "types.hpp"

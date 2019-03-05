@@ -18,7 +18,7 @@
 #include "pcode.hpp"
 #include "native6502.hpp"
 #include "types.hpp"
-#include "directory.hpp"
+#include "segment.hpp"
 #include <iterator>
 #include <cstddef>
 #include "options.hpp"

@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-#include "directory.hpp"
+#include "pcodefile.hpp"
 #include "types.hpp"
 #include "options.hpp"
 

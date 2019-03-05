@@ -15,7 +15,7 @@
 */
 
 #include "pcode.hpp"
-#include "directory.hpp"
+#include "segment.hpp"
 #include "types.hpp"
 #include "textio.hpp"
 #include "options.hpp"

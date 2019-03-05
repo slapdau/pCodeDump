@@ -33,13 +33,16 @@
     <ClInclude Include="options.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="directory.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="text.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="linkage.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="segment.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pcodefile.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,13 +65,16 @@
     <ClCompile Include="options.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="directory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="text.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="linkage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="segment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pcodefile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,32 +1,19 @@
-/*
-   Copyright 2017 Craig McGeachie
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
-#ifndef _773BCD58_B2D9_43BA_BC08_12754CD95096
-#define _773BCD58_B2D9_43BA_BC08_12754CD95096
+#ifndef _4F5901F5_E50C_44CC_BCC3_861305540578
+#define _4F5901F5_E50C_44CC_BCC3_861305540578
 
 #include "types.hpp"
+#include "basecode.hpp"
+#include "pcode.hpp"
+#include "native6502.hpp"
+#include "text.hpp"
+#include "linkage.hpp"
 
 #include <iostream>
-#include <map>
-#include <string>
 #include <memory>
+#include <string>
 #include <boost/endian/arithmetic.hpp>
 
 namespace pcodedump {
-
 	enum class SegmentKind {
 		linked,
 		hostseg,
@@ -56,16 +43,37 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
-	class SegmentDictionary;
+	class SegmentDictionary {
+	public:
+		friend class SegmentDictionaryEntry;
+
+		uint64_t intrinsicSegments() const;
+		std::wstring fileComment() const;
+
+		SegmentDictionaryEntry const operator[](int index) const;
+
+	private:
+		struct {
+			boost::endian::little_int16_t codeaddr;
+			boost::endian::little_int16_t codeleng;
+		} diskInfo[16];
+		char segName[16][8];
+		boost::endian::little_int16_t segKind[16];
+		boost::endian::little_int16_t textAddr[16];
+		boost::endian::little_int16_t segInfo[16];
+		boost::endian::little_uint64_t intrinsicSegs;
+		boost::endian::little_uint16_t filler[68];
+		char comment[80];
+	};
 
 	class SegmentDictionaryEntry {
 		friend class SegmentDictionary;
-	
+
 	private:
 		SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index);
 
 	public:
-		int getIndex() const { return index;  }
+		int getIndex() const { return index; }
 		int codeAddress() const;
 		int codeLength() const;
 		std::wstring name() const;
@@ -106,7 +114,7 @@ namespace pcodedump {
 		}
 
 	private:
-		
+
 		void writeHeader(std::wostream& os) const;
 		std::unique_ptr<CodePart> createCodePart();
 		std::unique_ptr<InterfaceText> createInterfaceText();
@@ -123,25 +131,6 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const Segment& segment);
 
-	using Segments = std::vector<std::shared_ptr<Segment>>;
-
-	class PcodeFile {
-		friend std::wostream& operator<<(std::wostream&, const PcodeFile&);
-
-	public:
-		PcodeFile(buff_t const & buffer);
-
-	private:
-		std::unique_ptr<Segments> extractSegments();
-	
-	private:
-		buff_t const & buffer;
-		SegmentDictionary const & segmentDictionary;
-		std::unique_ptr<Segments> segments;
-	};
-
-	std::wostream& operator<<(std::wostream& os, const PcodeFile& value);
-
 }
 
-#endif // !_773BCD58_B2D9_43BA_BC08_12754CD95096
+#endif // !_4F5901F5_E50C_44CC_BCC3_861305540578
