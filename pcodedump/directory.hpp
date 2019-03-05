@@ -40,6 +40,7 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const SegmentKind& value);
 
+	// http://www.unige.ch/medecine/nouspikel/ti99/psystem.htm#Segment%20info
 	enum class MachineType {
 		undentified,
 		pcode_big,
