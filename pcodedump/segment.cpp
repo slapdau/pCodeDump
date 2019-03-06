@@ -100,9 +100,14 @@ namespace pcodedump {
 		return os;
 	}
 
+	Segment::Segment(SegmentDictionaryEntry const dictionaryEntry) :
+		dictionaryEntry{ dictionaryEntry }
+	{
+	}
+
 	CodeSegment::CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
+		Segment{ dictionaryEntry},
 		buffer{ buffer },
-		dictionaryEntry{ dictionaryEntry },
 		endBlock{ endBlock },
 		codePart{ createCodePart() },
 		interfaceText{ createInterfaceText() },

@@ -90,17 +90,11 @@ namespace pcodedump {
 		int index;
 	};
 
-	class CodePart;
-	class InterfaceText;
-	class LinkageInfo;
-
-	class CodeSegment {
-		friend std::wostream& operator<<(std::wostream&, const CodeSegment&);
+	class Segment {
 	public:
-		CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
+		Segment(SegmentDictionaryEntry const dictionaryEntry);
 
 	public:
-
 		int getDictionaryIndex() const {
 			return dictionaryEntry.getIndex();
 		}
@@ -109,20 +103,31 @@ namespace pcodedump {
 			return dictionaryEntry.segmentKind();
 		}
 
+	protected:
+		SegmentDictionaryEntry const dictionaryEntry;
+	};
+
+	class CodePart;
+	class InterfaceText;
+	class LinkageInfo;
+
+	class CodeSegment : public Segment {
+		friend std::wostream& operator<<(std::wostream&, const CodeSegment&);
+	public:
+		CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
+
 		int getFirstBlock() const {
 			return dictionaryEntry.startAddress();
 		}
 
 	private:
-
 		void writeHeader(std::wostream& os) const;
 		std::unique_ptr<CodePart> createCodePart();
 		std::unique_ptr<InterfaceText> createInterfaceText();
 		std::unique_ptr<LinkageInfo> createLinkageInfo();
 
-	protected:
+	private:
 		buff_t const & buffer;
-		SegmentDictionaryEntry const dictionaryEntry;
 		int endBlock;
 		std::unique_ptr<CodePart> codePart;
 		std::unique_ptr<InterfaceText> interfaceText;
