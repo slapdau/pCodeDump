@@ -39,7 +39,7 @@ namespace pcodedump {
 		return left.startAddress() > right.startAddress();
 	}
 
-	bool index(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
+	bool index(shared_ptr<CodeSegment const> left, shared_ptr<CodeSegment const> right) {
 		return left->getDictionaryIndex() > right->getDictionaryIndex();
 	}
 
@@ -70,7 +70,7 @@ namespace pcodedump {
 		auto segments = make_unique<Segments>();
 		int currentEnd = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
 		for (auto dictionaryEntry : dictionaryEntries) {
-			segments->push_back(make_shared<Segment>(buffer, dictionaryEntry, currentEnd));
+			segments->push_back(make_shared<CodeSegment>(buffer, dictionaryEntry, currentEnd));
 			currentEnd = dictionaryEntry.startAddress();
 		}
 

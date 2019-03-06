@@ -23,7 +23,7 @@ using namespace std;
 
 namespace pcodedump {
 
-	InterfaceText::InterfaceText(Segment & segment, const uint8_t * text) :
+	InterfaceText::InterfaceText(CodeSegment & segment, const uint8_t * text) :
 		segment{ segment }, text{ text }
 	{
 	}

@@ -58,7 +58,7 @@ namespace pcodedump {
 	};
 
 
-	class Segment;
+	class CodeSegment;
 	class ProcedureDictionary;
 
 	class CodePart final {
@@ -67,7 +67,7 @@ namespace pcodedump {
 		CodePart(const CodePart &) = delete;
 		CodePart(const CodePart &&) = delete;
 
-		CodePart(Segment & segment, std::uint8_t const * segBegin, int segLength);
+		CodePart(CodeSegment & segment, std::uint8_t const * segBegin, int segLength);
 
 		uint8_t const * begin() const {
 			return data.begin();

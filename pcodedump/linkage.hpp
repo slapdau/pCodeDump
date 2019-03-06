@@ -23,13 +23,13 @@
 
 namespace pcodedump {
 
-	class Segment;
+	class CodeSegment;
 
 	enum class LinkageType { eofMark, unitRef, globRef, publRef, privRef, constRef, globDef, publDef, constDef, extProc, extFunc, sepProc, sepFunc, seppRef, sepfRef };
 
 	class LinkageInfo {
 	public:
-		LinkageInfo(Segment & segment, const std::uint8_t * linkage);
+		LinkageInfo(CodeSegment & segment, const std::uint8_t * linkage);
 
 		void write(std::wostream& os) const;
 
@@ -48,7 +48,7 @@ namespace pcodedump {
 		static std::map<LinkageType, std::tuple<std::wstring, decode_function_t>> linkageNames;
 
 	private:
-		Segment & segment;
+		CodeSegment & segment;
 		const std::uint8_t * linkage;
 	};
 

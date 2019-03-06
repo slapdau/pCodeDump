@@ -26,10 +26,10 @@
 
 namespace pcodedump {
 
-	class Segment;
+	class CodeSegment;
 	class SegmentDictionary;
 
-	using Segments = std::vector<std::shared_ptr<Segment>>;
+	using Segments = std::vector<std::shared_ptr<CodeSegment>>;
 
 	class PcodeFile {
 		friend std::wostream& operator<<(std::wostream&, const PcodeFile&);

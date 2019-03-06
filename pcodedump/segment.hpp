@@ -94,10 +94,10 @@ namespace pcodedump {
 	class InterfaceText;
 	class LinkageInfo;
 
-	class Segment {
-		friend std::wostream& operator<<(std::wostream&, const Segment&);
+	class CodeSegment {
+		friend std::wostream& operator<<(std::wostream&, const CodeSegment&);
 	public:
-		Segment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
+		CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
 
 	public:
 
@@ -129,7 +129,7 @@ namespace pcodedump {
 		std::unique_ptr<LinkageInfo> linkageInfo;
 	};
 
-	std::wostream& operator<<(std::wostream& os, const Segment& segment);
+	std::wostream& operator<<(std::wostream& os, const CodeSegment& segment);
 
 }
 

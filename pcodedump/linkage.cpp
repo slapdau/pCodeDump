@@ -27,7 +27,7 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	LinkageInfo::LinkageInfo(Segment & segment, const std::uint8_t * linkage) :
+	LinkageInfo::LinkageInfo(CodeSegment & segment, const std::uint8_t * linkage) :
 		segment{ segment }, linkage{ linkage }
 	{
 	}

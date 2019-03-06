@@ -100,7 +100,7 @@ namespace pcodedump {
 		return os;
 	}
 
-	Segment::Segment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
+	CodeSegment::CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		buffer{ buffer },
 		dictionaryEntry{ dictionaryEntry },
 		endBlock{ endBlock },
@@ -110,13 +110,13 @@ namespace pcodedump {
 	{
 	}
 
-	unique_ptr<CodePart> Segment::createCodePart() {
+	unique_ptr<CodePart> CodeSegment::createCodePart() {
 		assert(dictionaryEntry.codeAddress());
 		return make_unique<CodePart>(*this, buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE, dictionaryEntry.codeLength());
 	}
 
 	/* Create a new interface text segment if this directry entry points to one. */
-	unique_ptr<InterfaceText> Segment::createInterfaceText() {
+	unique_ptr<InterfaceText> CodeSegment::createInterfaceText() {
 		if (dictionaryEntry.textAddress()) {
 			return make_unique<InterfaceText>(*this, buffer.data() + dictionaryEntry.textAddress() * BLOCK_SIZE);
 		} else {
@@ -126,7 +126,7 @@ namespace pcodedump {
 
 	/* Create a new linkage segment if this directory entry has unlinked code.
 	   The location of linkage data has to be inferred as the block following code data. */
-	unique_ptr<LinkageInfo> Segment::createLinkageInfo()
+	unique_ptr<LinkageInfo> CodeSegment::createLinkageInfo()
 	{
 		if (dictionaryEntry.linkageAddress() != this->endBlock) {
 			return make_unique<LinkageInfo>(*this, buffer.data() + dictionaryEntry.linkageAddress() * BLOCK_SIZE);
@@ -135,7 +135,7 @@ namespace pcodedump {
 		}
 	}
 
-	void Segment::writeHeader(std::wostream& os) const {
+	void CodeSegment::writeHeader(std::wostream& os) const {
 		FmtSentry<wostream::char_type> sentry{ os };
 		os << "Segment " << dec << dictionaryEntry.segmentNumber() << L": ";
 		os << dictionaryEntry.name() << L" (" << dictionaryEntry.segmentKind() << L")" << endl;
@@ -164,7 +164,7 @@ namespace pcodedump {
 		}
 	}
 
-	std::wostream& operator<<(std::wostream& os, const Segment & segment) {
+	std::wostream& operator<<(std::wostream& os, const CodeSegment & segment) {
 		segment.writeHeader(os);
 		os << endl;
 		if (showText && segment.interfaceText.get() != nullptr) {

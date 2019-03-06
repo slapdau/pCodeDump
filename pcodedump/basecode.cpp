@@ -58,7 +58,7 @@ namespace pcodedump {
 		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(this) - 2 - 2 * index) + sizeof(little_int16_t);
 	}
 
-	CodePart::CodePart(Segment & segment, std::uint8_t const * segBegin, int segLength) :
+	CodePart::CodePart(CodeSegment & segment, std::uint8_t const * segBegin, int segLength) :
 		data{segBegin, segBegin+segLength },
 		procDict{ ProcedureDictionary::place(segBegin, segLength) },
 		procedures { extractProcedures() }
