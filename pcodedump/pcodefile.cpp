@@ -39,7 +39,7 @@ namespace pcodedump {
 		return left.startAddress() > right.startAddress();
 	}
 
-	bool index(shared_ptr<CodeSegment const> left, shared_ptr<CodeSegment const> right) {
+	bool index(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
 		return left->getDictionaryIndex() > right->getDictionaryIndex();
 	}
 
@@ -74,8 +74,13 @@ namespace pcodedump {
 			currentEnd = dictionaryEntry.startAddress();
 		}
 
-		sort(begin(*segments), end(*segments), index);
+		for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
+			if (segmentDictionary[directoryIndex].codeAddress() == 0 && segmentDictionary[directoryIndex].codeLength() != 0) {
+				segments->push_back(make_shared<DataSegment>(segmentDictionary[directoryIndex]));
+			}
+		}
 
+		sort(begin(*segments), end(*segments), index);
 		return segments;
 	}
 

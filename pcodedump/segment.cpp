@@ -105,6 +105,29 @@ namespace pcodedump {
 	{
 	}
 
+	Segment::~Segment() {
+	}
+
+	DataSegment::DataSegment(SegmentDictionaryEntry const dictionaryEntry) :
+		Segment{ dictionaryEntry }
+	{
+	}
+
+	std::wostream & DataSegment::writeOut(std::wostream & os) const
+	{
+		FmtSentry<wostream::char_type> sentry{ os };
+
+		os << "Segment " << dec << dictionaryEntry.segmentNumber() << L": ";
+		os << dictionaryEntry.name() << L" (" << dictionaryEntry.segmentKind() << L")" << endl;
+		os << L"        Length : " << dictionaryEntry.codeLength() << endl;
+		os << L"  Segment info : version=" << dictionaryEntry.version() << ", mType=" << dictionaryEntry.machineType() << endl;
+		return os;
+	}
+
+	std::wostream& operator<<(std::wostream& os, const Segment & segment) {
+		return segment.writeOut(os);
+	}
+
 	CodeSegment::CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		Segment{ dictionaryEntry},
 		buffer{ buffer },
@@ -113,6 +136,24 @@ namespace pcodedump {
 		interfaceText{ createInterfaceText() },
 		linkageInfo{ createLinkageInfo() }
 	{
+	}
+
+	std::wostream& CodeSegment::writeOut(std::wostream& os) const {
+		writeHeader(os);
+		os << endl;
+		if (showText && interfaceText.get() != nullptr) {
+			interfaceText->write(os);
+			os << endl;
+		}
+		if (listProcs && codePart.get() != nullptr) {
+			codePart->disassemble(os);
+			os << endl;
+		}
+		if (showLinkage && linkageInfo.get() != nullptr) {
+			linkageInfo->write(os);
+			os << endl;
+		}
+		return os;
 	}
 
 	unique_ptr<CodePart> CodeSegment::createCodePart() {
@@ -167,24 +208,6 @@ namespace pcodedump {
 		if (this->codePart.get() != nullptr) {
 			this->codePart->writeHeader(os);
 		}
-	}
-
-	std::wostream& operator<<(std::wostream& os, const CodeSegment & segment) {
-		segment.writeHeader(os);
-		os << endl;
-		if (showText && segment.interfaceText.get() != nullptr) {
-			segment.interfaceText->write(os);
-			os << endl;
-		}
-		if (listProcs && segment.codePart.get() != nullptr) {
-			segment.codePart->disassemble(os);
-			os << endl;
-		}
-		if (showLinkage && segment.linkageInfo.get() != nullptr) {
-			segment.linkageInfo->write(os);
-			os << endl;
-		}
-		return os;
 	}
 
 }

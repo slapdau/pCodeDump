@@ -93,6 +93,7 @@ namespace pcodedump {
 	class Segment {
 	public:
 		Segment(SegmentDictionaryEntry const dictionaryEntry);
+		virtual ~Segment() = 0;
 
 	public:
 		int getDictionaryIndex() const {
@@ -103,22 +104,39 @@ namespace pcodedump {
 			return dictionaryEntry.segmentKind();
 		}
 
+		virtual int getFirstBlock() const = 0;
+		virtual std::wostream& writeOut(std::wostream&) const = 0;
+
 	protected:
 		SegmentDictionaryEntry const dictionaryEntry;
 	};
 
+	std::wostream& operator<<(std::wostream&, const Segment&);
+
+
+	class DataSegment : public Segment {
+	public:
+		DataSegment(SegmentDictionaryEntry const dictionaryEntry);
+
+		int getFirstBlock() const override {
+			return 0;
+		}
+		std::wostream& writeOut(std::wostream&) const override;
+	};
+	
 	class CodePart;
 	class InterfaceText;
 	class LinkageInfo;
 
 	class CodeSegment : public Segment {
-		friend std::wostream& operator<<(std::wostream&, const CodeSegment&);
 	public:
 		CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock);
 
-		int getFirstBlock() const {
+		int getFirstBlock() const override {
 			return dictionaryEntry.startAddress();
 		}
+
+		std::wostream& writeOut(std::wostream&) const override;
 
 	private:
 		void writeHeader(std::wostream& os) const;
@@ -133,8 +151,6 @@ namespace pcodedump {
 		std::unique_ptr<InterfaceText> interfaceText;
 		std::unique_ptr<LinkageInfo> linkageInfo;
 	};
-
-	std::wostream& operator<<(std::wostream& os, const CodeSegment& segment);
 
 }
 
