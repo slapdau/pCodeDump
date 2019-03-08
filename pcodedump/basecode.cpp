@@ -45,7 +45,7 @@ namespace pcodedump {
 		void * operator new(std::size_t) noexcept { return nullptr; }
 		void operator delete(void * ptr, std::size_t) noexcept {}
 		void * operator new[](std::size_t) noexcept { return nullptr; }
-			void operator delete[](void * ptr, std::size_t) noexcept {}
+		void operator delete[](void * ptr, std::size_t) noexcept {}
 
 
 	public:
@@ -78,12 +78,12 @@ namespace pcodedump {
 		os << L"    Procedures : " << procDict.numProcedures << endl;
 	}
 
+	bool procedureNumberOrder(shared_ptr<Procedure const> left, shared_ptr<Procedure const> right) {
+		return left->getProcedureNumber() < right->getProcedureNumber();
+	}
+
 	void CodePart::disassemble(std::wostream& os) const {
-		Procedures procedures{ *(this->procedures) };
-		if (addressOrder) {
-			sort(std::begin(procedures), std::end(procedures), [](const auto & left, const auto & right) { return left->getProcBegin() < right->getProcBegin(); });
-		}
-		for (auto & procedure : procedures) {
+		for (auto & procedure : *procedures) {
 			procedure->writeHeader(begin(), os);
 			if (disasmProcs) {
 				procedure->disassemble(begin(), os);
@@ -115,6 +115,7 @@ namespace pcodedump {
 			currentStart = end;
 		}
 
+		sort(std::begin(*result), std::end(*result), procedureNumberOrder);
 		return result;
 	}
 

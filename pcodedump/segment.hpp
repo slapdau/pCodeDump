@@ -100,6 +100,10 @@ namespace pcodedump {
 			return dictionaryEntry.getIndex();
 		}
 
+		int getSegmentNumber() const {
+			return dictionaryEntry.segmentNumber();
+		}
+
 		SegmentKind getSegmentKind() const {
 			return dictionaryEntry.segmentKind();
 		}

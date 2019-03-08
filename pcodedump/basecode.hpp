@@ -37,7 +37,7 @@ namespace pcodedump {
 		virtual void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const = 0;
 		virtual void disassemble(std::uint8_t const * segBegin, std::wostream& os) const = 0;
 
-		virtual ~Procedure() {}
+		virtual ~Procedure() = default;
 		
 		int getProcedureNumber() const {
 			return procedureNumber;

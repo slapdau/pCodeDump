@@ -36,7 +36,6 @@ namespace pcodedump {
 	bool showText;
 	bool showLinkage;
 	bool listProcs;
-	bool addressOrder;
 	bool disasmProcs;
 	string filename;
 
@@ -80,7 +79,6 @@ namespace pcodedump {
 			options_description opts{ "pcodedump" };
 			opts.add_options()
 				("help", bool_switch(&help), "Display this message")
-				("address", bool_switch(&addressOrder), "Display code file structures orderd by address")
 				("text", bool_switch(&showText), "Display interface text")
 				("procs", bool_switch(&listProcs), "Display segment procedures")
 				("disasm", bool_switch(&disasmProcs), "Display code disassembly (implies procs)")

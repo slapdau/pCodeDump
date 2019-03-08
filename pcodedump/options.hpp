@@ -26,7 +26,6 @@ namespace pcodedump {
 	extern bool showLinkage;
 	extern bool showText;
 	extern bool listProcs;
-	extern bool addressOrder;
 	extern bool disasmProcs;
 	extern std::string filename;
 	extern cpu_t cpu;

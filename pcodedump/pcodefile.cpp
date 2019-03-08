@@ -34,13 +34,12 @@ namespace pcodedump {
 	{
 	}
 
-
-	bool reverseAddress(SegmentDictionaryEntry const & left, SegmentDictionaryEntry const & right) {
+	bool reverseAddressOrder(SegmentDictionaryEntry const & left, SegmentDictionaryEntry const & right) {
 		return left.startAddress() > right.startAddress();
 	}
 
-	bool index(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
-		return left->getDictionaryIndex() > right->getDictionaryIndex();
+	bool segmentNumberOrder(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
+		return left->getSegmentNumber() < right->getSegmentNumber();
 	}
 
 	/* Scan the directory and return a list of segments, and
@@ -65,7 +64,7 @@ namespace pcodedump {
 			}
 		}
 
-		sort(begin(dictionaryEntries), end(dictionaryEntries), reverseAddress);
+		sort(begin(dictionaryEntries), end(dictionaryEntries), reverseAddressOrder);
 
 		auto segments = make_unique<Segments>();
 		int currentEnd = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
@@ -80,7 +79,7 @@ namespace pcodedump {
 			}
 		}
 
-		sort(begin(*segments), end(*segments), index);
+		sort(begin(*segments), end(*segments), segmentNumberOrder);
 		return segments;
 	}
 
@@ -114,12 +113,7 @@ namespace pcodedump {
 		os << L"Comment: " << comment << endl;
 		writeIntrinsicUnits(os, file.segmentDictionary.intrinsicSegments());
 		os << endl;
-		Segments segments;
-		copy(begin(*file.segments), end(*file.segments), back_inserter(segments));
-		if (addressOrder) {
-			sort(begin(segments), end(segments), [](const auto &left, const auto &right) { return left->getFirstBlock() < right->getFirstBlock(); });
-		}
-		for (auto segment : segments) {
+		for (auto segment : *file.segments) {
 			os << *segment << endl;
 		}
 		return os;
