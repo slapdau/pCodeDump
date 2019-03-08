@@ -154,6 +154,10 @@ namespace pcodedump {
 		std::unique_ptr<CodePart> codePart;
 		std::unique_ptr<InterfaceText> interfaceText;
 		std::unique_ptr<LinkageInfo> linkageInfo;
+	public:
+		static bool showText;
+		static bool listProcs;
+		static bool showLinkage;
 	};
 
 }

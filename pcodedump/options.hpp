@@ -23,10 +23,6 @@ namespace pcodedump {
 
 	enum class cpu_t { _6502, _65c02, _65c816 };
 
-	extern bool showLinkage;
-	extern bool showText;
-	extern bool listProcs;
-	extern bool disasmProcs;
 	extern std::string filename;
 	extern cpu_t cpu;
 

@@ -86,6 +86,9 @@ namespace pcodedump {
 		Range<std::uint8_t const> data;
 		ProcedureDictionary const & procDict;
 		std::unique_ptr<Procedures const> procedures;
+
+	public:
+		static bool disasmProcs;
 	};
 
 }

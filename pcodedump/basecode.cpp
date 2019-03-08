@@ -82,6 +82,8 @@ namespace pcodedump {
 		return left->getProcedureNumber() < right->getProcedureNumber();
 	}
 
+	bool CodePart::disasmProcs = false;
+
 	void CodePart::disassemble(std::wostream& os) const {
 		for (auto & procedure : *procedures) {
 			procedure->writeHeader(begin(), os);

@@ -27,16 +27,14 @@
 #include <boost/program_options.hpp>
 
 #include "options.hpp"
+#include "segment.hpp"
+#include "basecode.hpp"
 #include "native6502.hpp"
 
 using namespace std;
 
 namespace pcodedump {
 
-	bool showText;
-	bool showLinkage;
-	bool listProcs;
-	bool disasmProcs;
 	string filename;
 
 	namespace {
@@ -79,14 +77,14 @@ namespace pcodedump {
 			options_description opts{ "pcodedump" };
 			opts.add_options()
 				("help", bool_switch(&help), "Display this message")
-				("text", bool_switch(&showText), "Display interface text")
-				("procs", bool_switch(&listProcs), "Display segment procedures")
-				("disasm", bool_switch(&disasmProcs), "Display code disassembly (implies procs)")
+				("text", bool_switch(&CodeSegment::showText), "Display interface text")
+				("procs", bool_switch(&CodeSegment::listProcs), "Display segment procedures")
+				("disasm", bool_switch(&CodePart::disasmProcs), "Display code disassembly (implies procs)")
 				("cpu", value<cpu_t>()->default_value(cpu_t::_6502)->notifier(Native6502Procedure::initialiseCpu),
 					"CPU type for disassembled native code:\n"
 					"  6502\n"
 					"  65c02")
-					("link", bool_switch(&showLinkage), "Display linker information");
+					("link", bool_switch(&CodeSegment::showLinkage), "Display linker information");
 			options_description allopts{ "All options" };
 			allopts.add_options()
 				("input-file", value<string>(&filename), "");
@@ -96,7 +94,7 @@ namespace pcodedump {
 			variables_map vm;
 			store(command_line_parser(argc, argv).options(allopts).positional(positional).run(), vm);
 			notify(vm);
-			listProcs |= disasmProcs;
+			CodeSegment::listProcs |= CodePart::disasmProcs;
 
 			if (help) {
 				cout << opts << endl;

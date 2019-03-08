@@ -128,6 +128,10 @@ namespace pcodedump {
 		return segment.writeOut(os);
 	}
 
+	bool CodeSegment::showText = false;
+	bool CodeSegment::listProcs = false;
+	bool CodeSegment::showLinkage = false;
+
 	CodeSegment::CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		Segment{ dictionaryEntry},
 		buffer{ buffer },
