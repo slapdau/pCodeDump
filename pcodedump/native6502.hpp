@@ -43,8 +43,12 @@ namespace pcodedump {
 
 		static void initialiseCpu(cpu_t const &);
 
-		void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const;
-		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;
+		std::optional<int> getLexicalLevel() const override {
+			return std::nullopt;
+		}
+
+		void writeHeader(std::wostream& os) const override;
+		void disassemble(std::wostream& os) const override;
 
 	private:
 		using Relocations = std::vector<std::uint8_t const *>;

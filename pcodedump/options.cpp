@@ -79,6 +79,7 @@ namespace pcodedump {
 				("help", bool_switch(&help), "Display this message")
 				("text", bool_switch(&CodeSegment::showText), "Display interface text")
 				("procs", bool_switch(&CodeSegment::listProcs), "Display segment procedures")
+				("tree", bool_switch(&CodePart::treeProcs), "Display procedure nesting (implies procs)")
 				("disasm", bool_switch(&CodePart::disasmProcs), "Display code disassembly (implies procs)")
 				("cpu", value<cpu_t>()->default_value(cpu_t::_6502)->notifier(Native6502Procedure::initialiseCpu),
 					"CPU type for disassembled native code:\n"
@@ -94,7 +95,7 @@ namespace pcodedump {
 			variables_map vm;
 			store(command_line_parser(argc, argv).options(allopts).positional(positional).run(), vm);
 			notify(vm);
-			CodeSegment::listProcs |= CodePart::disasmProcs;
+			CodeSegment::listProcs |= CodePart::disasmProcs || CodePart::treeProcs;
 
 			if (help) {
 				cout << opts << endl;

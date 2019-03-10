@@ -46,8 +46,12 @@ namespace pcodedump {
 		using base = Procedure;
 		PcodeProcedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range);
 
-		void writeHeader(std::uint8_t const * segBegin, std::wostream& os) const;
-		void disassemble(std::uint8_t const * segBegin, std::wostream& os) const;
+		std::optional<int> getLexicalLevel() const override {
+			return attributeTable->lexLevel;
+		}
+
+		void writeHeader(std::wostream& os) const override;
+		void disassemble(std::wostream& os) const override;
 
 	private:
 		std::uint8_t const * getEnterIc() const;

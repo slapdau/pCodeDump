@@ -428,16 +428,16 @@ namespace pcodedump {
 		}
 	}
 
-	void Native6502Procedure::writeHeader(std::uint8_t const * segBegin, std::wostream & os) const {
+	void Native6502Procedure::writeHeader(std::wostream & os) const {
 		auto procBegin = data.begin();
 		auto procLength = data.end() - data.begin();
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
-		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ") Native (6502)  ";
+		os << hex << setfill(L'0') << right << setw(4) << distance(codePart.begin(), procBegin) << ":" << setw(4) << distance(codePart.begin(), procBegin) + procLength - 1<< ") Native (6502)  ";
 		os << endl;
 	}
 
 	/* Write a disassembly of the procedure to an output stream. */
-	void Native6502Procedure::disassemble(std::uint8_t const * segBegin, std::wostream & os) const {
+	void Native6502Procedure::disassemble(std::wostream & os) const {
 		uint8_t const * ic = data.begin();
 		os << uppercase;
 		while (ic && ic < procEnd) {

@@ -308,11 +308,11 @@ namespace pcodedump {
 		return reinterpret_cast<uint8_t const *>(&attributeTable->procedureNumber) + index;
 	}
 
-	void PcodeProcedure::writeHeader(uint8_t const * segBegin, std::wostream& os) const {
+	void PcodeProcedure::writeHeader(std::wostream& os) const {
 		auto procBegin = data.begin();
 		auto procLength = data.end() - data.begin();
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
-		os << hex << setfill(L'0') << right << setw(4) << distance(segBegin, procBegin) << ":" << setw(4) << distance(segBegin, procBegin) + procLength << ")  P-Code (LSB)   ";
+		os << hex << setfill(L'0') << right << setw(4) << distance(codePart.begin(), procBegin) << ":" << setw(4) << distance(codePart.begin(), procBegin) + procLength - 1 << ")  P-Code (LSB)   ";
 		os << setfill(L' ') << dec << left;
 		os << L"Lex level = " << setw(4) << attributeTable->lexLevel;
 		os << L"Parameters = " << setw(4) << attributeTable->paramaterSize;
@@ -320,7 +320,7 @@ namespace pcodedump {
 		os << endl;
 	}
 
-	void PcodeProcedure::disassemble(uint8_t const * segBegin, std::wostream& os) const {
+	void PcodeProcedure::disassemble(std::wostream& os) const {
 		uint8_t const * ic = data.begin();
 		while (ic && ic < data.end()) {
 			

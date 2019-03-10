@@ -21,7 +21,11 @@
 #include "segment.hpp"
 #include <iterator>
 #include <cstddef>
-#include "options.hpp"
+
+#include <stack>
+#include <optional>
+#include <string>
+#include <algorithm>
 
 using namespace std;
 using namespace boost::endian;
@@ -45,7 +49,7 @@ namespace pcodedump {
 		void * operator new(std::size_t) noexcept { return nullptr; }
 		void operator delete(void * ptr, std::size_t) noexcept {}
 		void * operator new[](std::size_t) noexcept { return nullptr; }
-		void operator delete[](void * ptr, std::size_t) noexcept {}
+			void operator delete[](void * ptr, std::size_t) noexcept {}
 
 
 	public:
@@ -59,9 +63,9 @@ namespace pcodedump {
 	}
 
 	CodePart::CodePart(CodeSegment & segment, std::uint8_t const * segBegin, int segLength) :
-		data{segBegin, segBegin+segLength },
+		data{ segBegin, segBegin + segLength },
 		procDict{ ProcedureDictionary::place(segBegin, segLength) },
-		procedures { extractProcedures() }
+		procedures{ extractProcedures() }, treeRoot{ extractTree() }
 	{
 	}
 
@@ -82,16 +86,49 @@ namespace pcodedump {
 		return left->getProcedureNumber() < right->getProcedureNumber();
 	}
 
+	bool addressOrder(shared_ptr<Procedure const> left, shared_ptr<Procedure const> right) {
+		return left->getProcBegin() < right->getProcBegin();
+	}
+
 	bool CodePart::disasmProcs = false;
+	bool CodePart::treeProcs = false;
 
 	void CodePart::disassemble(std::wostream& os) const {
-		for (auto & procedure : *procedures) {
-			procedure->writeHeader(begin(), os);
-			if (disasmProcs) {
-				procedure->disassemble(begin(), os);
-				os << endl;
+		if (treeProcs) {
+			treeRoot->writeOut(os, L"");
+			os << endl;
+		}
+		if (!treeProcs || disasmProcs) {
+			for (auto & procedure : *procedures) {
+				procedure->writeHeader(os);
+				if (disasmProcs) {
+					procedure->disassemble(os);
+					os << endl;
+				}
 			}
 		}
+	}
+
+	ScopeNode::ScopeNode(std::shared_ptr<Procedure const> procedure) : procedure{ procedure }, children{ std::make_unique<ScopeNodes>() }
+	{
+	}
+
+	void ScopeNode::add(shared_ptr<ScopeNode> child) {
+		children->insert(begin(*children), child);
+	}
+
+	void ScopeNode::writeOut(std::wostream& os, std::wstring prefix) const {
+		procedure->writeHeader(os);
+		if (!children->empty()) {
+			for (auto child = cbegin(*children); child != cend(*children) - 1; ++child) {
+				os << prefix << L" |--";
+				(*child)->writeOut(os, prefix + wstring{ L" |  " });
+			}
+			auto child = cend(*children) - 1;
+			os << prefix << L" \\--";
+			(*child)->writeOut(os, prefix + wstring{ L"    " });
+		}
+
 	}
 
 	/* Get the procedure code memory ranges and construct a vector of procedure objedts.
@@ -117,8 +154,39 @@ namespace pcodedump {
 			currentStart = end;
 		}
 
-		sort(std::begin(*result), std::end(*result), procedureNumberOrder);
 		return result;
+	}
+
+	/* Get the procedure code memory ranges and construct a vector of procedure objedts.
+	   The procedure pointers in the segment point to the end of each pointer.  In
+	   memory this works well for the P-machine, but for disassembling the procedures
+	   we need to begin at the start. Once the ranges are known, an object for each
+	   procedure will be constructed with the full information.*/
+	shared_ptr<ScopeNode> CodePart::extractTree() {
+		Procedures  procedures{ *(this->procedures) };
+		sort(::std::begin(procedures), ::std::end(procedures), addressOrder);
+		stack<shared_ptr<ScopeNode>> nativeStack;
+		stack<shared_ptr<ScopeNode>> pcodeStack;
+
+		for (auto procedure : procedures) {
+			if (procedure->getLexicalLevel()) {
+				auto newNode = make_shared<ScopeNode>(procedure);
+				while (!pcodeStack.empty() && newNode->getLexicalLevel() < pcodeStack.top()->getLexicalLevel()) {
+					newNode->add(pcodeStack.top());
+					pcodeStack.pop();
+				}
+				pcodeStack.push(newNode);
+			} else {
+				nativeStack.push(make_shared<ScopeNode>(procedure));
+			}
+		}
+
+		while (!nativeStack.empty()) {
+			pcodeStack.top()->add(nativeStack.top());
+			nativeStack.pop();
+		}
+
+		return  pcodeStack.top();
 	}
 
 }
