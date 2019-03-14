@@ -21,7 +21,6 @@
 #include <map>
 #include <iomanip>
 #include <memory>
-#include <boost/endian/arithmetic.hpp>
 
 using namespace std;
 using namespace boost::endian;
@@ -29,7 +28,6 @@ using namespace boost::endian;
 namespace pcodedump {
 
 	namespace {
-		enum class LinkageType { eofMark, unitRef, globRef, publRef, privRef, constRef, globDef, publDef, constDef, extProc, extFunc, sepProc, sepFunc, seppRef, sepfRef };
 
 		map<LinkageType, wstring> linkageNames = {
 			{ LinkageType::eofMark,  L"end of linkage" },
@@ -75,22 +73,6 @@ namespace pcodedump {
 		return *reinterpret_cast<T const *>(address);
 	}
 
-	class LinkRecord {
-	protected:
-		LinkRecord(std::wstring name, std::uint8_t const * fieldStart);
-
-	public:
-		virtual ~LinkRecord() = 0;
-		virtual bool endOfLinkage() const { return false; }
-		virtual std::uint8_t const * end() const;
-		virtual LinkageType linkRecordType() const = 0;
-		virtual void writeOut(std::wostream & os) const;
-
-	private:
-		std::wstring name;
-		std::uint8_t const * fieldStart;
-	};
-
 	LinkRecord::LinkRecord(std::wstring name, std::uint8_t const * fieldStart) : name{ name }, fieldStart{ fieldStart }
 	{
 	}
@@ -107,32 +89,11 @@ namespace pcodedump {
 		os << L"  " << name << L" " << setfill(L' ') << left << setw(20) << linkRecordType() << L" ";
 	}
 
-	class LinkReference : public LinkRecord {
-	protected:
-		struct Fields {
-			boost::endian::little_int16_t format;
-			boost::endian::little_int16_t numberOfReferences;
-			boost::endian::little_int16_t numberOfWords;
-			boost::endian::little_int16_t references;
-		};
-
-	protected:
-		LinkReference(std::wstring name, std::uint8_t const * fieldStart);
-
-	public:
-		virtual ~LinkReference() = 0;
-		std::uint8_t const * end() const override final;
-		void writeOut(std::wostream & os) const override;
-		void writeReferences(std::wostream & os) const;
-
-	private:
-		std::vector<int> extractReferences();
-
-	protected:
-		Fields const & fields;
-
-	private:
-		std::vector<int> const references;
+	struct LinkReference::Fields {
+		boost::endian::little_int16_t format;
+		boost::endian::little_int16_t numberOfReferences;
+		boost::endian::little_int16_t numberOfWords;
+		boost::endian::little_int16_t references;
 	};
 
 	LinkReference::LinkReference(std::wstring name, std::uint8_t const * fieldStart) :
@@ -180,25 +141,6 @@ namespace pcodedump {
 		return result;
 	}
 
-	class GlobalReference final : public LinkReference {
-	public:
-		GlobalReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::globRef; }
-	};
-
-	class PublicReference final : public LinkReference {
-	public:
-		PublicReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::publRef; }
-	};
-
-	class PrivateReference final : public LinkReference {
-	public:
-		PrivateReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::privRef; }
-		void writeOut(std::wostream & os) const override;
-	};
-
 	void PrivateReference::writeOut(std::wostream & os) const
 	{
 		LinkRecord::writeOut(os);
@@ -219,20 +161,9 @@ namespace pcodedump {
 		LinkageType linkRecordType() const override { return LinkageType::unitRef; }
 	};
 
-	class GlobalDefinition final : public LinkRecord {
-	private:
-		struct Fields {
-			boost::endian::little_int16_t homeProcedure;
-			boost::endian::little_int16_t icOffset;
-		};
-
-	public:
-		GlobalDefinition(std::wstring name, std::uint8_t const * fieldStart);
-		LinkageType linkRecordType() const override { return LinkageType::globDef; }
-		void writeOut(std::wostream & os) const override final;
-
-	private:
-		Fields const & fields;
+	struct GlobalDefinition::Fields {
+		boost::endian::little_int16_t homeProcedure;
+		boost::endian::little_int16_t icOffset;
 	};
 
 	GlobalDefinition::GlobalDefinition(std::wstring name, std::uint8_t const * fieldStart) :
@@ -247,19 +178,8 @@ namespace pcodedump {
 		os << dec << L"#" << fields.homeProcedure << L", IC=" << fields.icOffset << endl;
 	}
 
-	class PublicDefinition final : public LinkRecord {
-	private:
-		struct Fields {
-			boost::endian::little_int16_t baseOffset;
-		};
-
-	public:
-		PublicDefinition(std::wstring name, std::uint8_t const * fieldStart);
-		LinkageType linkRecordType() const override { return LinkageType::publDef; }
-		void writeOut(std::wostream & os) const override final;
-
-	private:
-		Fields const & fields;
+	struct PublicDefinition::Fields {
+		boost::endian::little_int16_t baseOffset;
 	};
 
 	PublicDefinition::PublicDefinition(std::wstring name, std::uint8_t const * fieldStart) :
@@ -274,19 +194,8 @@ namespace pcodedump {
 		os << dec << L"base = " << fields.baseOffset << endl;
 	}
 
-	class ConstantDefinition final : public LinkRecord {
-	private:
-		struct Fields {
-			boost::endian::little_int16_t constantValue;
-		};
-
-	public:
-		ConstantDefinition(std::wstring name, std::uint8_t const * fieldStart);
-		LinkageType linkRecordType() const override { return LinkageType::constDef; }
-		void writeOut(std::wostream & os) const override final;
-
-	private:
-		Fields const & fields;
+	struct ConstantDefinition::Fields {
+		boost::endian::little_int16_t constantValue;
 	};
 
 	ConstantDefinition::ConstantDefinition(std::wstring name, std::uint8_t const * fieldStart) :
@@ -301,22 +210,9 @@ namespace pcodedump {
 		os << dec << L"= " << fields.constantValue << endl;
 	}
 
-	class LinkRoutine : public LinkRecord {
-	private:
-		struct Fields {
-			boost::endian::little_int16_t sourceProcedure;
-			boost::endian::little_int16_t numberOfParams;
-		};
-
-	protected:
-		LinkRoutine(std::wstring name, std::uint8_t const * fieldStart);
-
-	public:
-		virtual ~LinkRoutine() = 0;
-		void writeOut(std::wostream & os) const override final;
-
-	private:
-		Fields const & fields;
+	struct LinkRoutine::Fields {
+		boost::endian::little_int16_t sourceProcedure;
+		boost::endian::little_int16_t numberOfParams;
 	};
 
 	LinkRoutine::LinkRoutine(std::wstring name, std::uint8_t const * fieldStart) :
@@ -332,46 +228,9 @@ namespace pcodedump {
 		os << dec << L"#" << fields.sourceProcedure << " (" << fields.numberOfParams << L" words)" << endl;
 	}
 
-	class ExternalProcedure final : public LinkRoutine {
-	public:
-		ExternalProcedure(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::extProc; }
-	};
-
-	class ExternalFunction final : public LinkRoutine {
-	public:
-		ExternalFunction(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::extFunc; }
-	};
-
-	class SeparateProcedure final : public LinkRoutine {
-	public:
-		SeparateProcedure(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::sepProc; }
-	};
-
-	class SeparateFunction final : public LinkRoutine {
-	public:
-		SeparateFunction(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
-		LinkageType linkRecordType() const override { return LinkageType::sepFunc; }
-	};
-
-	class EndOfFileMark final : public LinkRecord {
-	private:
-		struct Fields {
-			boost::endian::little_int16_t nextBaseLc;
-			boost::endian::little_int16_t privateDataSegment;
-		};
-
-	public:
-		EndOfFileMark(std::wstring name, SegmentKind const segmentKind,std::uint8_t const * fieldStart);
-		bool endOfLinkage() const override { return true; }
-		LinkageType linkRecordType() const override { return LinkageType::eofMark; }
-		void writeOut(std::wostream & os) const override final;
-
-	private:
-		Fields const & fields;
-		SegmentKind const segmentKind;
+	struct EndOfFileMark::Fields {
+		boost::endian::little_int16_t nextBaseLc;
+		boost::endian::little_int16_t privateDataSegment;
 	};
 
 	EndOfFileMark::EndOfFileMark(std::wstring name, SegmentKind const segmentKind, std::uint8_t const * fieldStart) :
