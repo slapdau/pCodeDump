@@ -49,7 +49,7 @@ namespace pcodedump {
 		void * operator new(std::size_t) noexcept { return nullptr; }
 		void operator delete(void * ptr, std::size_t) noexcept {}
 		void * operator new[](std::size_t) noexcept { return nullptr; }
-			void operator delete[](void * ptr, std::size_t) noexcept {}
+		void operator delete[](void * ptr, std::size_t) noexcept {}
 
 
 	public:
@@ -94,11 +94,11 @@ namespace pcodedump {
 	bool CodePart::treeProcs = false;
 
 	void CodePart::disassemble(std::wostream& os) const {
-		if (treeProcs) {
+		if (treeProcs && treeRoot) {
 			treeRoot->writeOut(os, L"");
 			os << endl;
 		}
-		if (!treeProcs || disasmProcs) {
+		if (!(treeProcs && treeRoot) || disasmProcs) {
 			for (auto & procedure : *procedures) {
 				procedure->writeHeader(os);
 				if (disasmProcs) {
@@ -181,12 +181,15 @@ namespace pcodedump {
 			}
 		}
 
-		while (!nativeStack.empty()) {
-			pcodeStack.top()->add(nativeStack.top());
-			nativeStack.pop();
+		if (pcodeStack.empty()) {
+			return shared_ptr<ScopeNode>();
+		} else {
+			while (!nativeStack.empty()) {
+				pcodeStack.top()->add(nativeStack.top());
+				nativeStack.pop();
+			}
+			return  pcodeStack.top();
 		}
-
-		return  pcodeStack.top();
 	}
 
 }
