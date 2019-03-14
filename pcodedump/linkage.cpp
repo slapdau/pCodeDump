@@ -20,6 +20,7 @@
 #include <string>
 #include <map>
 #include <iomanip>
+#include <memory>
 #include <boost/endian/arithmetic.hpp>
 
 using namespace std;
@@ -27,27 +28,28 @@ using namespace boost::endian;
 
 namespace pcodedump {
 
-	LinkageInfo::LinkageInfo(CodeSegment & segment, const std::uint8_t * linkage) :
-		segment{ segment }, linkage{ linkage }
-	{
-	}
+	namespace {
+		enum class LinkageType { eofMark, unitRef, globRef, publRef, privRef, constRef, globDef, publDef, constDef, extProc, extFunc, sepProc, sepFunc, seppRef, sepfRef };
 
-	/* Write out linkage records. */
-	void LinkageInfo::write(std::wostream & os) const
-	{
-		uint8_t const * current = linkage;
-		os << L"Linkage records:" << endl;
-		while (current) {
-			wstring name{ current, current + 8 };
-			current += 8;
-			int linkageTypeValue = *reinterpret_cast<little_int16_t const *>(current);
-			LinkageType linkageType = static_cast<LinkageType>(linkageTypeValue);
-			current += sizeof(little_int16_t);
-			wstring linkageTypeName;
-			decode_function_t decode_function;
-			tie(linkageTypeName, decode_function) = linkageNames[linkageType];
-			os << L"  " << name << L" " << setfill(L' ') << left << setw(20) << linkageTypeName << L" ";
-			current = (this->*decode_function)(os, current);
+		map<LinkageType, wstring> linkageNames = {
+			{ LinkageType::eofMark,  L"end of linkage" },
+			{ LinkageType::unitRef,  L"unit reference" },
+			{ LinkageType::globRef,  L"global reference" },
+			{ LinkageType::publRef,  L"public reference" },
+			{ LinkageType::privRef,  L"private reference" },
+			{ LinkageType::constRef, L"constant reference" },
+			{ LinkageType::globDef,  L"global definition" },
+			{ LinkageType::publDef,  L"public definition" },
+			{ LinkageType::constDef, L"constant value" },
+			{ LinkageType::extProc,  L"external procedure" },
+			{ LinkageType::extFunc,  L"external function" },
+			{ LinkageType::sepProc,  L"separate procedure" },
+			{ LinkageType::sepFunc,  L"separate function" },
+		};
+
+		std::wostream& operator<<(std::wostream& os, const LinkageType& value) {
+			os << linkageNames[value];
+			return os;
 		}
 	}
 
@@ -68,86 +70,398 @@ namespace pcodedump {
 
 	}
 
-	/* Write out a list of address references back into the procedure code and return the next
-	   address beyond the array storage. */
-	uint8_t const * LinkageInfo::decode_referenceArray(wostream & os, uint8_t const *current, int numberOfRefs) const {
-		auto pointers = reinterpret_cast<little_int16_t const *>(current);
-		os << hex << setfill(L'0') << right;
-		for (int index = 0; index != numberOfRefs; ++index) {
-			if (index % 8 == 0) {
-				if (index != 0) {
-					os << endl;
-				}
-				os << "    ";
-			}
-			os << setw(4) << pointers[index] << L" ";
-		}
+	template <typename T>
+	T const & place(std::uint8_t const * address) {
+		return *reinterpret_cast<T const *>(address);
+	}
+
+	class LinkRecord {
+	protected:
+		LinkRecord(std::wstring name, std::uint8_t const * fieldStart);
+
+	public:
+		virtual ~LinkRecord() = 0;
+		virtual bool endOfLinkage() const { return false; }
+		virtual std::uint8_t const * end() const;
+		virtual LinkageType linkRecordType() const = 0;
+		virtual void writeOut(std::wostream & os) const;
+
+	private:
+		std::wstring name;
+		std::uint8_t const * fieldStart;
+	};
+
+	LinkRecord::LinkRecord(std::wstring name, std::uint8_t const * fieldStart) : name{ name }, fieldStart{ fieldStart }
+	{
+	}
+
+	LinkRecord::~LinkRecord() = default;
+
+	std::uint8_t const * LinkRecord::end() const
+	{
+		return fieldStart + sizeof(little_int16_t[3]);
+	}
+
+	void LinkRecord::writeOut(std::wostream & os) const
+	{
+		os << L"  " << name << L" " << setfill(L' ') << left << setw(20) << linkRecordType() << L" ";
+	}
+
+	class LinkReference : public LinkRecord {
+	protected:
+		struct Fields {
+			boost::endian::little_int16_t format;
+			boost::endian::little_int16_t numberOfReferences;
+			boost::endian::little_int16_t numberOfWords;
+			boost::endian::little_int16_t references;
+		};
+
+	protected:
+		LinkReference(std::wstring name, std::uint8_t const * fieldStart);
+
+	public:
+		virtual ~LinkReference() = 0;
+		std::uint8_t const * end() const override final;
+		void writeOut(std::wostream & os) const override;
+		void writeReferences(std::wostream & os) const;
+
+	private:
+		std::vector<int> extractReferences();
+
+	protected:
+		Fields const & fields;
+
+	private:
+		std::vector<int> const references;
+	};
+
+	LinkReference::LinkReference(std::wstring name, std::uint8_t const * fieldStart) :
+		LinkRecord{ name, fieldStart },
+		fields{ place<Fields>(fieldStart) },
+		references{ extractReferences() }
+	{
+	}
+
+	LinkReference::~LinkReference() = default;
+
+	std::uint8_t const * LinkReference::end() const
+	{
+		return reinterpret_cast<uint8_t const *>((&fields.references + (fields.numberOfReferences / 8 + 1) * 8)->data());
+	}
+
+	void LinkReference::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		os << static_cast<OperandFormat>(fields.format.value());
+		writeReferences(os);
 		os << endl;
-		return current + (numberOfRefs / 8 + 1) * 8 * sizeof(little_int16_t);
 	}
 
-	uint8_t const * LinkageInfo::decode_reference(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		os << static_cast<OperandFormat>(static_cast<int>(parameters[0])) << endl;
-		return decode_referenceArray(os, current + sizeof(little_int16_t) * 3, parameters[1]);
+	void LinkReference::writeReferences(std::wostream & os) const
+	{
+		os << hex << setfill(L'0') << right;
+		int count = 0;
+		for (auto reference : references) {
+			if (count % 8 == 0) {
+				os << endl << "    ";
+			}
+			os << setw(4) << reference << L" ";
+			++count;
+		}
 	}
 
-	uint8_t const * LinkageInfo::decode_privateReference(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		os << static_cast<OperandFormat>(static_cast<int>(parameters[0])) << L" (" << parameters[2] << L" words)" << endl;
-		return decode_referenceArray(os, current + sizeof(little_int16_t) * 3, parameters[1]);
+	std::vector<int> LinkReference::extractReferences()
+	{
+		auto references = &fields.references;
+		std::vector<int> result;
+		for (int index = 0; index != fields.numberOfReferences; ++index) {
+			result.push_back(references[index]);
+		}
+		return result;
 	}
 
-	uint8_t const * LinkageInfo::decode_globalDefinition(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		os << dec << L"#" << parameters[0] << L", IC=" << parameters[1] << endl;
-		return current + sizeof(little_int16_t) * 3;
+	class GlobalReference final : public LinkReference {
+	public:
+		GlobalReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::globRef; }
+	};
+
+	class PublicReference final : public LinkReference {
+	public:
+		PublicReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::publRef; }
+	};
+
+	class PrivateReference final : public LinkReference {
+	public:
+		PrivateReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::privRef; }
+		void writeOut(std::wostream & os) const override;
+	};
+
+	void PrivateReference::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		os << static_cast<OperandFormat>(fields.format.value()) << L" (" << fields.numberOfWords << L" words)";
+		writeReferences(os);
+		os << endl;
 	}
 
-	uint8_t const * LinkageInfo::decode_publicDefinition(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		os << dec << L"base = " << parameters[0] << endl;
-		return current + sizeof(little_int16_t) * 3;
+	class ConstantReference final : public LinkReference {
+	public:
+		ConstantReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::constRef; }
+	};
+
+	class UnitReference final : public LinkReference {
+	public:
+		UnitReference(std::wstring name, std::uint8_t const * fieldStart) : LinkReference(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::unitRef; }
+	};
+
+	class GlobalDefinition final : public LinkRecord {
+	private:
+		struct Fields {
+			boost::endian::little_int16_t homeProcedure;
+			boost::endian::little_int16_t icOffset;
+		};
+
+	public:
+		GlobalDefinition(std::wstring name, std::uint8_t const * fieldStart);
+		LinkageType linkRecordType() const override { return LinkageType::globDef; }
+		void writeOut(std::wostream & os) const override final;
+
+	private:
+		Fields const & fields;
+	};
+
+	GlobalDefinition::GlobalDefinition(std::wstring name, std::uint8_t const * fieldStart) :
+		LinkRecord{ name, fieldStart },
+		fields{ place<Fields>(fieldStart) }
+	{
 	}
 
-	uint8_t const * LinkageInfo::decode_constantDefinition(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		os << dec << L"= " << parameters[0] << endl;
-		return current + sizeof(little_int16_t) * 3;
+	void GlobalDefinition::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		os << dec << L"#" << fields.homeProcedure << L", IC=" << fields.icOffset << endl;
 	}
 
-	uint8_t const * LinkageInfo::decode_externalRoutine(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		os << dec << L"#" << parameters[0] << " (" << parameters[1] << L" words)" << endl;
-		return current + sizeof(little_int16_t) * 3;
+	class PublicDefinition final : public LinkRecord {
+	private:
+		struct Fields {
+			boost::endian::little_int16_t baseOffset;
+		};
+
+	public:
+		PublicDefinition(std::wstring name, std::uint8_t const * fieldStart);
+		LinkageType linkRecordType() const override { return LinkageType::publDef; }
+		void writeOut(std::wostream & os) const override final;
+
+	private:
+		Fields const & fields;
+	};
+
+	PublicDefinition::PublicDefinition(std::wstring name, std::uint8_t const * fieldStart) :
+		LinkRecord{ name, fieldStart },
+		fields{ place<Fields>(fieldStart) }
+	{
 	}
 
-	uint8_t const * LinkageInfo::decode_endOfFile(wostream & os, uint8_t const *current) const {
-		auto parameters = reinterpret_cast<little_int16_t const *>(current);
-		if (segment.getSegmentKind() != SegmentKind::seprtseg) {
-			os << dec << parameters[0] << " global words";
-			if (segment.getSegmentKind() == SegmentKind::unlinkedIntrins) {
-				os << ", private data seg #" << parameters[1];
+	void PublicDefinition::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		os << dec << L"base = " << fields.baseOffset << endl;
+	}
+
+	class ConstantDefinition final : public LinkRecord {
+	private:
+		struct Fields {
+			boost::endian::little_int16_t constantValue;
+		};
+
+	public:
+		ConstantDefinition(std::wstring name, std::uint8_t const * fieldStart);
+		LinkageType linkRecordType() const override { return LinkageType::constDef; }
+		void writeOut(std::wostream & os) const override final;
+
+	private:
+		Fields const & fields;
+	};
+
+	ConstantDefinition::ConstantDefinition(std::wstring name, std::uint8_t const * fieldStart) :
+		LinkRecord{ name, fieldStart },
+		fields{ place<Fields>(fieldStart) }
+	{
+	}
+
+	void ConstantDefinition::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		os << dec << L"= " << fields.constantValue << endl;
+	}
+
+	class LinkRoutine : public LinkRecord {
+	private:
+		struct Fields {
+			boost::endian::little_int16_t sourceProcedure;
+			boost::endian::little_int16_t numberOfParams;
+		};
+
+	protected:
+		LinkRoutine(std::wstring name, std::uint8_t const * fieldStart);
+
+	public:
+		virtual ~LinkRoutine() = 0;
+		void writeOut(std::wostream & os) const override final;
+
+	private:
+		Fields const & fields;
+	};
+
+	LinkRoutine::LinkRoutine(std::wstring name, std::uint8_t const * fieldStart) :
+		LinkRecord{ name, fieldStart },
+		fields{ place<Fields>(fieldStart) }
+	{
+	}
+	LinkRoutine::~LinkRoutine() = default;
+
+	void LinkRoutine::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		os << dec << L"#" << fields.sourceProcedure << " (" << fields.numberOfParams << L" words)" << endl;
+	}
+
+	class ExternalProcedure final : public LinkRoutine {
+	public:
+		ExternalProcedure(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::extProc; }
+	};
+
+	class ExternalFunction final : public LinkRoutine {
+	public:
+		ExternalFunction(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::extFunc; }
+	};
+
+	class SeparateProcedure final : public LinkRoutine {
+	public:
+		SeparateProcedure(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::sepProc; }
+	};
+
+	class SeparateFunction final : public LinkRoutine {
+	public:
+		SeparateFunction(std::wstring name, std::uint8_t const * fieldStart) : LinkRoutine(name, fieldStart) {}
+		LinkageType linkRecordType() const override { return LinkageType::sepFunc; }
+	};
+
+	class EndOfFileMark final : public LinkRecord {
+	private:
+		struct Fields {
+			boost::endian::little_int16_t nextBaseLc;
+			boost::endian::little_int16_t privateDataSegment;
+		};
+
+	public:
+		EndOfFileMark(std::wstring name, SegmentKind const segmentKind,std::uint8_t const * fieldStart);
+		bool endOfLinkage() const override { return true; }
+		LinkageType linkRecordType() const override { return LinkageType::eofMark; }
+		void writeOut(std::wostream & os) const override final;
+
+	private:
+		Fields const & fields;
+		SegmentKind const segmentKind;
+	};
+
+	EndOfFileMark::EndOfFileMark(std::wstring name, SegmentKind const segmentKind, std::uint8_t const * fieldStart) :
+		LinkRecord{ name, fieldStart },
+		fields{ place<Fields>(fieldStart) },
+		segmentKind{ segmentKind }
+	{
+	}
+
+	void EndOfFileMark::writeOut(std::wostream & os) const
+	{
+		LinkRecord::writeOut(os);
+		if (segmentKind != SegmentKind::seprtseg) {
+			os << dec << fields.nextBaseLc << " global words";
+			if (segmentKind == SegmentKind::unlinkedIntrins) {
+				os << ", private data seg #" << fields.privateDataSegment;
 			}
 			os << endl;
 		}
-		return nullptr;
 	}
 
-	map<LinkageType, tuple<wstring, LinkageInfo::decode_function_t>> LinkageInfo::linkageNames = {
-		{ LinkageType::eofMark,  make_tuple(L"end of linkage", &LinkageInfo::decode_endOfFile) },
-		{ LinkageType::unitRef,  make_tuple(L"unit reference", &LinkageInfo::decode_reference) },
-		{ LinkageType::globRef,  make_tuple(L"global reference", &LinkageInfo::decode_reference) },
-		{ LinkageType::publRef,  make_tuple(L"public reference", &LinkageInfo::decode_reference) },
-		{ LinkageType::privRef,  make_tuple(L"private reference", &LinkageInfo::decode_privateReference) },
-		{ LinkageType::constRef, make_tuple(L"constant reference", &LinkageInfo::decode_reference) },
-		{ LinkageType::globDef,  make_tuple(L"global definition", &LinkageInfo::decode_globalDefinition) },
-		{ LinkageType::publDef,  make_tuple(L"public definition", &LinkageInfo::decode_publicDefinition) },
-		{ LinkageType::constDef, make_tuple(L"constant value", &LinkageInfo::decode_constantDefinition) },
-		{ LinkageType::extProc,  make_tuple(L"external procedure", &LinkageInfo::decode_externalRoutine) },
-		{ LinkageType::extFunc,  make_tuple(L"external function", &LinkageInfo::decode_externalRoutine) },
-		{ LinkageType::sepProc,  make_tuple(L"separate procedure", &LinkageInfo::decode_externalRoutine) },
-		{ LinkageType::sepFunc,  make_tuple(L"separate function", &LinkageInfo::decode_externalRoutine) },
-	};
+	shared_ptr<LinkRecord> readLinkRecord(CodeSegment & segment, uint8_t const * address) {
+		struct Header {
+			char name[8];
+			little_int16_t linkRecordType;
+			uint8_t fieldsStart;
+		};
+		Header const & header{ place<Header>(address) };
+		wstring name{ cbegin(header.name), cend(header.name) };
+		auto linkageType = static_cast<LinkageType>(header.linkRecordType.value());
+		switch (linkageType) {
+		case LinkageType::eofMark:
+			return make_shared<EndOfFileMark>(name, segment.getSegmentKind(), &header.fieldsStart);
+		case LinkageType::unitRef:
+			return make_shared<UnitReference>(name, &header.fieldsStart);
+		case LinkageType::globRef:
+			return make_shared<GlobalReference>(name, &header.fieldsStart);
+		case LinkageType::publRef:
+			return make_shared<PublicReference>(name, &header.fieldsStart);
+		case LinkageType::privRef:
+			return make_shared<PrivateReference>(name, &header.fieldsStart);
+		case LinkageType::constRef:
+			return make_shared<ConstantReference>(name, &header.fieldsStart);
+		case LinkageType::globDef:
+			return make_shared<GlobalDefinition>(name, &header.fieldsStart);
+		case LinkageType::publDef:
+			return make_shared<PublicDefinition>(name, &header.fieldsStart);
+		case LinkageType::constDef:
+			return make_shared<ConstantDefinition>(name, &header.fieldsStart);
+		case LinkageType::extProc:
+			return make_shared<ExternalProcedure>(name, &header.fieldsStart);
+		case LinkageType::extFunc:
+			return make_shared<ExternalFunction>(name, &header.fieldsStart);
+		case LinkageType::sepProc:
+			return make_shared<SeparateProcedure>(name, &header.fieldsStart);
+		case LinkageType::sepFunc:
+			return make_shared<SeparateFunction>(name, &header.fieldsStart);
+		default:
+			return shared_ptr<LinkRecord>();
+		}
+	}
+
+	vector<shared_ptr<LinkRecord>> readLinkRecords(CodeSegment & segment, uint8_t const * linkageBase) {
+		vector<shared_ptr<LinkRecord>> result;
+		uint8_t const * currentBase = linkageBase;
+		do {
+			result.push_back(readLinkRecord(segment, currentBase));
+			currentBase = result.back()->end();
+		} while (!result.back()->endOfLinkage());
+		return result;
+	}
+
+	std::wostream& operator<<(std::wostream& os, LinkRecord const & record) {
+		record.writeOut(os);
+		return os;
+	}
+
+	LinkageInfo::LinkageInfo(CodeSegment & segment, const std::uint8_t * linkageBase) :
+		linkRecords{ readLinkRecords(segment, linkageBase) }
+	{
+	}
+
+
+	/* Write out linkage records. */
+	void LinkageInfo::write(std::wostream & os) const
+	{
+		os << L"Linkage records:" << endl;
+		for (auto record : linkRecords) {
+			os << *record;
+		}
+	}
 
 }
