@@ -1,4 +1,7 @@
 #include "segment.hpp"
+#include "linkage.hpp"
+#include "basecode.hpp"
+#include "text.hpp"
 #include "textio.hpp"
 #include "options.hpp"
 #include <map>
@@ -145,15 +148,15 @@ namespace pcodedump {
 	std::wostream& CodeSegment::writeOut(std::wostream& os) const {
 		writeHeader(os);
 		os << endl;
-		if (showText && interfaceText.get() != nullptr) {
+		if (showText && interfaceText) {
 			interfaceText->write(os);
 			os << endl;
 		}
-		if (listProcs && codePart.get() != nullptr) {
+		if (listProcs && codePart) {
 			codePart->disassemble(os);
 			os << endl;
 		}
-		if (showLinkage && linkageInfo.get() != nullptr) {
+		if (showLinkage && linkageInfo) {
 			linkageInfo->write(os);
 			os << endl;
 		}
@@ -170,7 +173,7 @@ namespace pcodedump {
 		if (dictionaryEntry.textAddress()) {
 			return make_unique<InterfaceText>(*this, buffer.data() + dictionaryEntry.textAddress() * BLOCK_SIZE);
 		} else {
-			return unique_ptr<InterfaceText>(nullptr);
+			return unique_ptr<InterfaceText>();
 		}
 	}
 
@@ -181,7 +184,7 @@ namespace pcodedump {
 		if (dictionaryEntry.linkageAddress() != this->endBlock) {
 			return make_unique<LinkageInfo>(*this, buffer.data() + dictionaryEntry.linkageAddress() * BLOCK_SIZE);
 		} else {
-			return unique_ptr<LinkageInfo>(nullptr);
+			return unique_ptr<LinkageInfo>();
 		}
 	}
 
