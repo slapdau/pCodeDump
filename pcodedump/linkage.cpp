@@ -107,7 +107,9 @@ namespace pcodedump {
 
 	std::uint8_t const * LinkReference::end() const
 	{
-		return reinterpret_cast<uint8_t const *>((&fields.references + (fields.numberOfReferences / 8 + 1) * 8)->data());
+		intptr_t numberOfReferences = fields.numberOfReferences;
+		auto references = reinterpret_cast<int16_t const *>(fields.references.data());
+		return reinterpret_cast<uint8_t const *>(references + (numberOfReferences / 8 + 1) * 8);
 	}
 
 	void LinkReference::writeOut(std::wostream & os) const
