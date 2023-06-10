@@ -25,337 +25,67 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <functional>
 
 using namespace std;
+using namespace std::placeholders;
 using namespace boost::endian;
 
 namespace pcodedump {
 
-	PcodeProcedure::PcodeProcedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range) :
-		base(codePart, procedureNumber, range),
-		attributeTable{ reinterpret_cast<AttributeTable const *>(data.end() - sizeof(AttributeTable)) }
-	{}
-
-	vector<PcodeProcedure::dispatch_t> PcodeProcedure::dispatch = {
-		make_tuple(L"SDLC_0", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_1", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_2", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_3", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_4", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_5", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_6", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_7", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_8", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_9", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_10", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_11", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_12", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_13", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_14", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_15", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_16", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_17", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_18", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_19", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_20", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_21", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_22", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_23", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_24", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_25", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_26", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_27", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_28", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_29", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_30", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_31", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_32", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_33", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_34", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_35", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_36", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_37", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_38", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_39", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_40", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_41", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_42", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_43", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_44", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_45", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_46", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_47", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_48", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_49", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_50", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_51", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_52", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_53", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_54", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_55", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_56", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_57", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_58", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_59", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_60", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_61", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_62", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_63", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_64", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_65", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_66", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_67", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_68", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_69", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_70", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_71", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_72", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_73", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_74", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_75", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_76", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_77", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_78", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_79", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_80", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_81", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_82", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_83", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_84", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_85", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_86", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_87", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_88", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_89", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_90", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_91", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_92", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_93", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_94", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_95", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_96", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_97", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_98", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_99", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_100", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_101", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_102", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_103", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_104", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_105", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_106", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_107", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_108", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_109", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_110", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_111", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_112", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_113", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_114", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_115", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_116", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_117", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_118", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_119", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_120", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_121", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_122", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_123", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_124", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_125", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_126", &PcodeProcedure::decode_implied),
-		make_tuple(L"SDLC_127", &PcodeProcedure::decode_implied),
-		make_tuple(L"ABI", &PcodeProcedure::decode_implied),
-		make_tuple(L"ABR", &PcodeProcedure::decode_implied),
-		make_tuple(L"ADI", &PcodeProcedure::decode_implied),
-		make_tuple(L"ADR", &PcodeProcedure::decode_implied),
-		make_tuple(L"LAND", &PcodeProcedure::decode_implied),
-		make_tuple(L"DIF", &PcodeProcedure::decode_implied),
-		make_tuple(L"DVI", &PcodeProcedure::decode_implied),
-		make_tuple(L"DVR", &PcodeProcedure::decode_implied),
-		make_tuple(L"CHK", &PcodeProcedure::decode_implied),
-		make_tuple(L"FLO", &PcodeProcedure::decode_implied),
-		make_tuple(L"FLT", &PcodeProcedure::decode_implied),
-		make_tuple(L"INN", &PcodeProcedure::decode_implied),
-		make_tuple(L"INT", &PcodeProcedure::decode_implied),
-		make_tuple(L"LOR", &PcodeProcedure::decode_implied),
-		make_tuple(L"MODI", &PcodeProcedure::decode_implied),
-		make_tuple(L"MPI", &PcodeProcedure::decode_implied),
-		make_tuple(L"MPR", &PcodeProcedure::decode_implied),
-		make_tuple(L"NGI", &PcodeProcedure::decode_implied),
-		make_tuple(L"NGR", &PcodeProcedure::decode_implied),
-		make_tuple(L"LNOT", &PcodeProcedure::decode_implied),
-		make_tuple(L"SRS", &PcodeProcedure::decode_implied),
-		make_tuple(L"SBI", &PcodeProcedure::decode_implied),
-		make_tuple(L"SBR", &PcodeProcedure::decode_implied),
-		make_tuple(L"SGS", &PcodeProcedure::decode_implied),
-		make_tuple(L"SQI", &PcodeProcedure::decode_implied),
-		make_tuple(L"SQR", &PcodeProcedure::decode_implied),
-		make_tuple(L"STO", &PcodeProcedure::decode_implied),
-		make_tuple(L"IXS", &PcodeProcedure::decode_implied),
-		make_tuple(L"UNI", &PcodeProcedure::decode_implied),
-		make_tuple(L"LDE", &PcodeProcedure::decode_extended),
-		make_tuple(L"CSP", &PcodeProcedure::decode_callStandardProc),
-		make_tuple(L"LDCN", &PcodeProcedure::decode_implied),
-		make_tuple(L"ADJ", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"FJP", &PcodeProcedure::decode_jump),
-		make_tuple(L"INC", &PcodeProcedure::decode_big),
-		make_tuple(L"IND", &PcodeProcedure::decode_big),
-		make_tuple(L"IXA", &PcodeProcedure::decode_big),
-		make_tuple(L"LAO", &PcodeProcedure::decode_big),
-		make_tuple(L"LSA", &PcodeProcedure::decode_stringConstant),
-		make_tuple(L"LAE", &PcodeProcedure::decode_extended),
-		make_tuple(L"MOV", &PcodeProcedure::decode_big),
-		make_tuple(L"LDO", &PcodeProcedure::decode_big),
-		make_tuple(L"SAS", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"SRO", &PcodeProcedure::decode_big),
-		make_tuple(L"XJP", &PcodeProcedure::decode_case),
-		make_tuple(L"RNP", &PcodeProcedure::decode_return),
-		make_tuple(L"CIP", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"EQU", &PcodeProcedure::decode_compare),
-		make_tuple(L"GEQ", &PcodeProcedure::decode_compare),
-		make_tuple(L"GRT", &PcodeProcedure::decode_compare),
-		make_tuple(L"LDA", &PcodeProcedure::decode_intermediate),
-		make_tuple(L"LDC", &PcodeProcedure::decode_wordBlock),
-		make_tuple(L"LEQ", &PcodeProcedure::decode_compare),
-		make_tuple(L"LES", &PcodeProcedure::decode_compare),
-		make_tuple(L"LOD", &PcodeProcedure::decode_intermediate),
-		make_tuple(L"NEQ", &PcodeProcedure::decode_compare),
-		make_tuple(L"STR", &PcodeProcedure::decode_intermediate),
-		make_tuple(L"UJP", &PcodeProcedure::decode_jump),
-		make_tuple(L"LDP", &PcodeProcedure::decode_implied),
-		make_tuple(L"STP", &PcodeProcedure::decode_implied),
-		make_tuple(L"LDM", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"STM", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"LDB", &PcodeProcedure::decode_implied),
-		make_tuple(L"STB", &PcodeProcedure::decode_implied),
-		make_tuple(L"IXP", &PcodeProcedure::decode_doubleByte),
-		make_tuple(L"RBP", &PcodeProcedure::decode_return),
-		make_tuple(L"CBP", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"EQUI", &PcodeProcedure::decode_implied),
-		make_tuple(L"GEQI", &PcodeProcedure::decode_implied),
-		make_tuple(L"GRTI", &PcodeProcedure::decode_implied),
-		make_tuple(L"LLA", &PcodeProcedure::decode_big),
-		make_tuple(L"LDCI", &PcodeProcedure::decode_word),
-		make_tuple(L"LEQI", &PcodeProcedure::decode_implied),
-		make_tuple(L"LESI", &PcodeProcedure::decode_implied),
-		make_tuple(L"LDL", &PcodeProcedure::decode_big),
-		make_tuple(L"NEQI", &PcodeProcedure::decode_implied),
-		make_tuple(L"STL", &PcodeProcedure::decode_big),
-		make_tuple(L"CXP", &PcodeProcedure::decode_doubleByte),
-		make_tuple(L"CLP", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"CGP", &PcodeProcedure::decode_unsignedByte),
-		make_tuple(L"LPA", &PcodeProcedure::decode_packedConstant),
-		make_tuple(L"STE", &PcodeProcedure::decode_extended),
-		make_tuple(L"", &PcodeProcedure::decode_implied),
-		make_tuple(L"EFJ", &PcodeProcedure::decode_jump),
-		make_tuple(L"NFJ", &PcodeProcedure::decode_jump),
-		make_tuple(L"BPT", &PcodeProcedure::decode_big),
-		make_tuple(L"XIT", &PcodeProcedure::decode_implied),
-		make_tuple(L"NOP", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_1", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_2", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_3", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_4", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_5", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_6", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_7", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_8", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_9", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_10", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_11", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_12", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_13", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_14", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_15", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDL_16", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_1", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_2", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_3", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_4", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_5", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_6", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_7", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_8", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_9", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_10", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_11", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_12", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_13", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_14", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_15", &PcodeProcedure::decode_implied),
-		make_tuple(L"SLDO_16", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_0", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_1", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_2", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_3", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_4", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_5", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_6", &PcodeProcedure::decode_implied),
-		make_tuple(L"SIND_7", &PcodeProcedure::decode_implied),
-	};
+	namespace {
 
 
-	std::uint8_t const * PcodeProcedure::getEnterIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&attributeTable->enterIc));
-	}
+		class Disassembler final {
+		public:
+			Disassembler(std::wostream& os, PcodeProcedure const& procedure);
 
-	std::uint8_t const * PcodeProcedure::getExitIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&attributeTable->exitIc));
-	}
+			std::uint8_t const* decode(std::uint8_t const* current) const;
 
-	uint8_t const * PcodeProcedure::jtab(int index) const {
-		return reinterpret_cast<uint8_t const *>(&attributeTable->procedureNumber) + index;
-	}
+		private:
+			std::uint8_t const* decode_implied(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_unsignedByte(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_big(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_intermediate(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_extended(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_word(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_wordBlock(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_stringConstant(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_packedConstant(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_jump(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_return(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_doubleByte(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_case(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_callStandardProc(std::wstring& opCode, std::uint8_t const* current) const;
+			std::uint8_t const* decode_compare(std::wstring& opCode, std::uint8_t const* current) const;
 
-	void PcodeProcedure::writeHeader(std::wostream& os) const {
-		auto procBegin = data.begin();
-		auto procLength = data.end() - data.begin();
-		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
-		os << hex << setfill(L'0') << right << setw(4) << distance(codePart.begin(), procBegin) << ":" << setw(4) << distance(codePart.begin(), procBegin) + procLength - 1 << ")  P-Code (LSB)   ";
-		os << setfill(L' ') << dec << left;
-		os << L"Lex level = " << setw(4) << attributeTable->lexLevel;
-		os << L"Parameters = " << setw(4) << attributeTable->paramaterSize;
-		os << L"Variables = " << setw(4) << attributeTable->dataSize;
-		os << endl;
-	}
+			using decode_function_t = std::uint8_t const* (Disassembler::*)(std::wstring&, std::uint8_t const*) const;
+			// using decode_binding_t = decltype(bind(declval<decode_function_t>(), _1, declval<wstring &&>(), _2));
+			using decode_binding_t = function<std::uint8_t const* (Disassembler const*, std::uint8_t const*)>;
 
-	void PcodeProcedure::disassemble(std::wostream& os) const {
-		uint8_t const * ic = data.begin();
-		while (ic && ic < data.end()) {
+			static std::vector<decode_binding_t> dispatch;
+
+			std::wostream& os;
+			PcodeProcedure const& procedure;
+		};
 			
-			auto[opcode, decode_function] = dispatch[*ic];
-			ic = (this->*decode_function)(os, opcode, ic);
-		}
-	}
+		Disassembler::Disassembler(std::wostream& os, PcodeProcedure const& procedure) :
+			os{ os }, procedure{ procedure }
+		{}
 
-	void PcodeProcedure::printIc(std::wostream& os, uint8_t const * current)  const {
-		if (getEnterIc() == current) {
-			os << L"ENTER  :" << endl;
-		}
-		if (getExitIc() == current) {
-			os << L"EXIT   :" << endl;
-		}
-		os << L"   ";
-		os << hex << setfill(L'0') << right << setw(4) << static_cast<int>(current - getProcBegin()) << L": ";
-	}
-
-	uint8_t const * PcodeProcedure::decode_implied(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current);
+		uint8_t const* Disassembler::decode_implied(wstring& opCode, uint8_t const* current) const {
 		os << opCode << endl;
-		return current + 1;
+			return current;
 	}
 
 	/* ub */
-	uint8_t const * PcodeProcedure::decode_unsignedByte(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current);
+		uint8_t const* Disassembler::decode_unsignedByte(wstring& opCode, uint8_t const* current)  const {
 		os << setfill(L' ') << left << setw(9) << opCode << dec << *(current + 1) << endl;
-		return current + 2;
+			return current + 1;
 	}
 
 	/* b */
-	uint8_t const * PcodeProcedure::decode_big(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_big(wstring& opCode, uint8_t const* current)  const {
 		int value = *current++;
 		if (value & 0x80) {
 			value = ((value & 0x7f) << 8) + *current++;
@@ -365,8 +95,7 @@ namespace pcodedump {
 	}
 
 	/* db, b */
-	uint8_t const * PcodeProcedure::decode_intermediate(std::wostream& os, wstring &opCode, uint8_t const * current) const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_intermediate(wstring& opCode, uint8_t const* current) const {
 		int linkCount = *current++;
 		int offset = *current++;
 		if (offset & 0x80) {
@@ -377,8 +106,7 @@ namespace pcodedump {
 	}
 
 	/* ub, b */
-	uint8_t const * PcodeProcedure::decode_extended(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_extended(wstring& opCode, uint8_t const* current)  const {
 		int dataSegment = *current++;
 		int offset = *current++;
 		if (offset & 0x80) {
@@ -389,24 +117,22 @@ namespace pcodedump {
 	}
 
 	/* w */
-	uint8_t const * PcodeProcedure::decode_word(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
-		little_int16_t const * value = reinterpret_cast<little_int16_t const *>(current);
+		uint8_t const* Disassembler::decode_word(wstring& opCode, uint8_t const* current)  const {
+			little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
 		current += sizeof(little_int16_t);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << *value << endl;
 		return current;
 	}
 
-	void convertToReal(std::wostream& os, little_int16_t const * words) {
+		void convertToReal(std::wostream& os, little_int16_t const* words) {
 		uint16_t buf[2];
 		buf[1] = words[0];
 		buf[0] = words[1];
-		os << *reinterpret_cast<float *>(buf);
+			os << *reinterpret_cast<float*>(buf);
 	}
 
 	/* ub, word aligned block of words */
-	uint8_t const * PcodeProcedure::decode_wordBlock(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_wordBlock(wstring& opCode, uint8_t const* current)  const {
 		int total = *current;
 		if (reinterpret_cast<long long>(current) & 0x1) {
 			current++;
@@ -414,11 +140,11 @@ namespace pcodedump {
 		os << setfill(L' ') << left << setw(9) << opCode << dec << total;
 		if (total == 2) {
 			os << L"                    ; ";
-			convertToReal(os, reinterpret_cast<little_int16_t const *>(current));
+				convertToReal(os, reinterpret_cast<little_int16_t const*>(current));
 		}
 		os << endl;
 		for (int count = 0; count != total; ++count) {
-			little_int16_t const * value = reinterpret_cast<little_int16_t const *>(current);
+				little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
 			current += sizeof(little_int16_t);
 			os << setfill(L' ') << setw(18) << L"" << *value << endl;
 		}
@@ -426,14 +152,13 @@ namespace pcodedump {
 	}
 
 	/* ub, <chars> */
-	uint8_t const * PcodeProcedure::decode_stringConstant(std::wostream& os, wstring &opCode, uint8_t const * current) const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_stringConstant(wstring& opCode, uint8_t const* current) const {
 		uint8_t count = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
-		uint8_t const * finish = current + count;
+			uint8_t const* finish = current + count;
 		FmtSentry<wostream::char_type> sentry{ wcout };
 		while (current != finish) {
-			uint8_t const * next = distance(current, finish) >= 80 ? current + 80 : finish;
+				uint8_t const* next = distance(current, finish) >= 80 ? current + 80 : finish;
 			wcout << L"                  ";
 			line_chardump(current, next);
 			current = next;
@@ -443,8 +168,7 @@ namespace pcodedump {
 	}
 
 	/* ub, <bytes> */
-	uint8_t const * PcodeProcedure::decode_packedConstant(std::wostream& os, wstring &opCode, uint8_t const * current) const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_packedConstant(wstring& opCode, uint8_t const* current) const {
 		uint8_t count = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
 		hexdump(wstring{ L"                  " }, current, current + count);
@@ -453,29 +177,27 @@ namespace pcodedump {
 	}
 
 	/* sb */
-	uint8_t const * PcodeProcedure::decode_jump(std::wostream& os, wstring &opCode, uint8_t const * current) const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_jump(wstring& opCode, uint8_t const* current) const {
 		auto offset = getNext<int8_t>(current);
 		intptr_t address;
 		if (offset >= 0) {
-			address = (current + offset) - getProcBegin();
-		} else {
-			address = derefSelfPtr(jtab(offset)) - getProcBegin();
+				address = (current + offset) - procedure.getProcBegin();
+			}
+			else {
+				address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
 		}
 		os << setfill(L' ') << left << setw(9) << opCode << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
 		return current;
 	}
 
 	/* db */
-	uint8_t const * PcodeProcedure::decode_return(std::wostream& os, wstring &opCode, uint8_t const * current) const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_return(wstring& opCode, uint8_t const* current) const {
 		os << opCode << endl;
 		return nullptr;
 	}
 
 	/* ub, ub */
-	uint8_t const * PcodeProcedure::decode_doubleByte(std::wostream& os, wstring &opCode, uint8_t const * current) const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_doubleByte(wstring& opCode, uint8_t const* current) const {
 		int value_1 = *current++;
 		int value_2 = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << value_1 << L", " << value_2 << endl;
@@ -483,8 +205,7 @@ namespace pcodedump {
 	}
 
 	/* word aligned -> idx_min, idx_max, (uj sb), table */
-	uint8_t const * PcodeProcedure::decode_case(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_case(wstring& opCode, uint8_t const* current)  const {
 		if (reinterpret_cast<uintptr_t>(current) & 0x1) {
 			current++;
 		}
@@ -494,20 +215,19 @@ namespace pcodedump {
 		auto offset = getNext<int8_t>(current);
 		intptr_t address;
 		if (offset >= 0) {
-			address = (current + offset) - getProcBegin();
-		} else {
-			address = derefSelfPtr(jtab(offset)) - getProcBegin();
+				address = (current + offset) - procedure.getProcBegin();
+			}
+			else {
+				address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
 		}
 		os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;
 		for (int count = min; count != max + 1; ++count) {
-			address = derefSelfPtr(current) - getProcBegin();
+				address = derefSelfPtr(current) - procedure.getProcBegin();
 			getNext<little_int16_t>(current);
 			os << setfill(L' ') << setw(18) << L"" << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
 		}
 		return current;
 	}
-
-	namespace {
 
 		map<int, wstring> standardProcs = {
 			{ 0, L"iocheck" },
@@ -550,11 +270,8 @@ namespace pcodedump {
 			{ 40, L"memavail" },
 		};
 
-	}
-
 	/* CSP ub */
-	uint8_t const * PcodeProcedure::decode_callStandardProc(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_callStandardProc(wstring& opCode, uint8_t const* current)  const {
 		int standardProcNumber = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << setw(6) << standardProcNumber;
 		if (standardProcs.count(standardProcNumber)) {
@@ -565,8 +282,7 @@ namespace pcodedump {
 	}
 
 	/* 2-reals, 4-strings, 6-booleans, 8-sets, 10-byte arrays, 12-words. 10 and 12 have b as well */
-	uint8_t const * PcodeProcedure::decode_compare(std::wostream& os, wstring &opCode, uint8_t const * current)  const {
-		printIc(os, current++);
+		uint8_t const* Disassembler::decode_compare(wstring& opCode, uint8_t const* current)  const {
 		os << opCode << L" ";
 		switch (*current++) {
 		case 2:
@@ -602,6 +318,321 @@ namespace pcodedump {
 			break;
 		}
 		return current;
+	}
+
+		vector<Disassembler::decode_binding_t> Disassembler::dispatch = {
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_0" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_1" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_2" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_3" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_4" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_5" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_6" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_7" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_8" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_9" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_10" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_11" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_12" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_13" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_14" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_15" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_16" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_17" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_18" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_19" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_20" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_21" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_22" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_23" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_24" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_25" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_26" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_27" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_28" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_29" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_30" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_31" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_32" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_33" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_34" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_35" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_36" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_37" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_38" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_39" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_40" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_41" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_42" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_43" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_44" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_45" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_46" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_47" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_48" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_49" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_50" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_51" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_52" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_53" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_54" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_55" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_56" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_57" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_58" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_59" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_60" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_61" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_62" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_63" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_64" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_65" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_66" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_67" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_68" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_69" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_70" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_71" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_72" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_73" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_74" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_75" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_76" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_77" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_78" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_79" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_80" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_81" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_82" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_83" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_84" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_85" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_86" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_87" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_88" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_89" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_90" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_91" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_92" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_93" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_94" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_95" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_96" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_97" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_98" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_99" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_100" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_101" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_102" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_103" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_104" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_105" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_106" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_107" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_108" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_109" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_110" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_111" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_112" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_113" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_114" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_115" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_116" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_117" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_118" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_119" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_120" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_121" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_122" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_123" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_124" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_125" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_126" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_127" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"ABI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"ABR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"ADI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"ADR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LAND" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"DIF" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"DVI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"DVR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"CHK" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"FLO" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"FLT" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"INN" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"INT" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LOR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"MODI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"MPI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"MPR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"NGI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"NGR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LNOT" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SRS" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SBI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SBR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SGS" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SQI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SQR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"STO" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"IXS" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"UNI" }, _2),
+			bind(&Disassembler::decode_extended, _1, wstring{ L"LDE" }, _2),
+			bind(&Disassembler::decode_callStandardProc, _1, wstring{ L"CSP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LDCN" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"ADJ" }, _2),
+			bind(&Disassembler::decode_jump, _1, wstring{ L"FJP" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"INC" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"IND" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"IXA" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"LAO" }, _2),
+			bind(&Disassembler::decode_stringConstant, _1, wstring{ L"LSA" }, _2),
+			bind(&Disassembler::decode_extended, _1, wstring{ L"LAE" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"MOV" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"LDO" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"SAS" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"SRO" }, _2),
+			bind(&Disassembler::decode_case, _1, wstring{ L"XJP" }, _2),
+			bind(&Disassembler::decode_return, _1, wstring{ L"RNP" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"CIP" }, _2),
+			bind(&Disassembler::decode_compare, _1, wstring{ L"EQU" }, _2),
+			bind(&Disassembler::decode_compare, _1, wstring{ L"GEQ" }, _2),
+			bind(&Disassembler::decode_compare, _1, wstring{ L"GRT" }, _2),
+			bind(&Disassembler::decode_intermediate, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_wordBlock, _1, wstring{ L"LDC" }, _2),
+			bind(&Disassembler::decode_compare, _1, wstring{ L"LEQ" }, _2),
+			bind(&Disassembler::decode_compare, _1, wstring{ L"LES" }, _2),
+			bind(&Disassembler::decode_intermediate, _1, wstring{ L"LOD" }, _2),
+			bind(&Disassembler::decode_compare, _1, wstring{ L"NEQ" }, _2),
+			bind(&Disassembler::decode_intermediate, _1, wstring{ L"STR" }, _2),
+			bind(&Disassembler::decode_jump, _1, wstring{ L"UJP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LDP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"STP" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"LDM" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"STM" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LDB" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"STB" }, _2),
+			bind(&Disassembler::decode_doubleByte, _1, wstring{ L"IXP" }, _2),
+			bind(&Disassembler::decode_return, _1, wstring{ L"RBP" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"CBP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"EQUI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"GEQI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"GRTI" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"LLA" }, _2),
+			bind(&Disassembler::decode_word, _1, wstring{ L"LDCI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LEQI" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"LESI" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"LDL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"NEQI" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"STL" }, _2),
+			bind(&Disassembler::decode_doubleByte, _1, wstring{ L"CXP" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"CLP" }, _2),
+			bind(&Disassembler::decode_unsignedByte, _1, wstring{ L"CGP" }, _2),
+			bind(&Disassembler::decode_packedConstant, _1, wstring{ L"LPA" }, _2),
+			bind(&Disassembler::decode_extended, _1, wstring{ L"STE" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"" }, _2),
+			bind(&Disassembler::decode_jump, _1, wstring{ L"EFJ" }, _2),
+			bind(&Disassembler::decode_jump, _1, wstring{ L"NFJ" }, _2),
+			bind(&Disassembler::decode_big, _1, wstring{ L"BPT" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"XIT" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"NOP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_1" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_2" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_3" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_4" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_5" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_6" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_7" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_8" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_9" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_10" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_11" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_12" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_13" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_14" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_15" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDL_16" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_1" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_2" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_3" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_4" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_5" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_6" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_7" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_8" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_9" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_10" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_11" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_12" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_13" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_14" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_15" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SLDO_16" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_0" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_1" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_2" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_3" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_4" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_5" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_6" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SIND_7" }, _2),
+		};
+
+		std::uint8_t const* Disassembler::decode(std::uint8_t const* current) const {
+			auto opcode = *current++;
+			return dispatch[opcode](this, current);
+		}
+
+	}
+
+	PcodeProcedure::PcodeProcedure(CodePart& codePart, int procedureNumber, Range<std::uint8_t const> range) :
+		base(codePart, procedureNumber, range),
+		attributeTable{ reinterpret_cast<AttributeTable const*>(data.end() - sizeof(AttributeTable)) }
+	{}
+
+	std::uint8_t const* PcodeProcedure::getEnterIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const*>(&attributeTable->enterIc));
+	}
+
+	std::uint8_t const* PcodeProcedure::getExitIc() const {
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const*>(&attributeTable->exitIc));
+	}
+
+	uint8_t const* PcodeProcedure::jtab(int index) const {
+		return reinterpret_cast<uint8_t const*>(&attributeTable->procedureNumber) + index;
+	}
+
+	void PcodeProcedure::writeHeader(std::wostream& os) const {
+		auto procBegin = data.begin();
+		auto procLength = data.end() - data.begin();
+		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
+		os << hex << setfill(L'0') << right << setw(4) << distance(codePart.begin(), procBegin) << ":" << setw(4) << distance(codePart.begin(), procBegin) + procLength - 1 << ")  P-Code (LSB)   ";
+		os << setfill(L' ') << dec << left;
+		os << L"Lex level = " << setw(4) << attributeTable->lexLevel;
+		os << L"Parameters = " << setw(4) << attributeTable->paramaterSize;
+		os << L"Variables = " << setw(4) << attributeTable->dataSize;
+		os << endl;
+	}
+
+	void PcodeProcedure::disassemble(std::wostream& os) const {
+		Disassembler disassember{ os, *this};
+		uint8_t const* ic = data.begin();
+		while (ic && ic < data.end()) {
+			printIc(os, ic);
+			ic = disassember.decode(ic);
+		}
+	}
+
+	void PcodeProcedure::printIc(std::wostream& os, uint8_t const* current)  const {
+		if (getEnterIc() == current) {
+			os << L"ENTER  :" << endl;
+		}
+		if (getExitIc() == current) {
+			os << L"EXIT   :" << endl;
+		}
+		os << L"   ";
+		os << hex << setfill(L'0') << right << setw(4) << static_cast<int>(current - getProcBegin()) << L": ";
 	}
 
 }

@@ -53,35 +53,12 @@ namespace pcodedump {
 		void writeHeader(std::wostream& os) const override;
 		void disassemble(std::wostream& os) const override;
 
+		std::uint8_t const * jtab(int index) const;
 	private:
 		std::uint8_t const * getEnterIc() const;
 		std::uint8_t const * getExitIc() const;
 
 		void printIc(std::wostream& os, std::uint8_t const * current)  const;
-
-		std::uint8_t const * jtab(int index) const;
-
-		std::uint8_t const * decode_implied(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_unsignedByte(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_big(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_intermediate(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_extended(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_word(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_wordBlock(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_stringConstant(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_packedConstant(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_jump(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_return(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_doubleByte(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_case(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_callStandardProc(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_compare(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-
-		using decode_function_t = std::uint8_t const * (PcodeProcedure::*)(std::wostream&, std::wstring&, std::uint8_t const *) const;
-
-		using dispatch_t = std::tuple<std::wstring, decode_function_t>;
-
-		static std::vector<dispatch_t> dispatch;
 
 	private:
 		AttributeTable const * attributeTable;

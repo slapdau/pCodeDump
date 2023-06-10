@@ -59,32 +59,13 @@ namespace pcodedump {
 
 		void printIc(std::wostream& os, std::uint8_t const * current) const;
 
-		std::uint8_t const * decode_implied(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_immedidate(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_accumulator(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_absolute(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_absoluteindirect(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_absoluteindirectindexed(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_zeropage(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_zeropageindirect(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_absoluteindexedx(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_absoluteindexedy(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_zeropageindexedx(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_zeropageindexedy(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_relative(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_indexedindirect(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-		std::uint8_t const * decode_indirectindexed(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const;
-
-		using decode_function_t = std::uint8_t const * (Native6502Procedure::*)(std::wostream&, std::wstring&, std::uint8_t const *) const;
-		using dispatch_t = std::tuple<std::wstring, decode_function_t>;
-		static std::vector<dispatch_t> dispatch;
-		static std::map<int, dispatch_t> dispatch_65c02;
-
 		AttributeTable const * attributeTable;
 		uint8_t const * procEnd;
 
+	public:
 		std::wstring formatAbsoluteAddress(std::uint8_t const * address) const;
 
+	private:
 		Relocations baseRelocations;
 		Relocations segRelocations;
 		Relocations procRelocations;

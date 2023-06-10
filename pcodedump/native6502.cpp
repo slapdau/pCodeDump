@@ -25,14 +25,17 @@
 #include <iomanip>
 #include <algorithm>
 #include <iostream>
+#include <functional>
 
 using namespace std;
+using namespace std::placeholders;
 using namespace boost::endian;
 
 namespace pcodedump {
 
-	/* Format a sequence of bytes as a string of space separated 2-digit hex values. */
 	namespace {
+
+		/* Format a sequence of bytes as a string of space separated 2-digit hex values. */
 		wstring toHexString(uint8_t const * begin, uint8_t const * end) {
 			wostringstream buff;
 			buff << hex << uppercase << setfill(L'0') << right;
@@ -43,6 +46,467 @@ namespace pcodedump {
 				buff << L" " << setw(2) << *current;
 			}
 			return buff.str();
+		}
+
+		class Disassembler final {
+		public:
+			Disassembler(std::wostream & os, Native6502Procedure const & procedure);
+
+			static void initialiseCpu(cpu_t const cpu);
+			std::uint8_t const * decode(std::uint8_t const * current) const;
+
+		private:
+			std::uint8_t const * decode_implied(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_immedidate(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_accumulator(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_absolute(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_absoluteindirect(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_absoluteindirectindexed(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_zeropage(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_zeropageindirect(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_absoluteindexedx(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_absoluteindexedy(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_zeropageindexedx(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_zeropageindexedy(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_relative(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_indexedindirect(std::wstring &opCode, std::uint8_t const * current) const;
+			std::uint8_t const * decode_indirectindexed(std::wstring &opCode, std::uint8_t const * current) const;
+
+			using decode_function_t = std::uint8_t const * (Disassembler::*)(std::wstring&, std::uint8_t const *) const;
+			//using decode_binding_t = decltype(bind(declval<decode_function_t>(), _1, declval<wstring &&>(), _2));
+			using decode_binding_t = function<std::uint8_t const *(Disassembler const *, std::uint8_t const *)>;
+
+			static std::vector<decode_binding_t> dispatch;
+			static std::map<int, decode_binding_t> dispatch_65c02;
+
+			std::wostream & os;
+			Native6502Procedure const & procedure;
+		};
+
+		Disassembler::Disassembler(std::wostream & os, Native6502Procedure const & procedure) :
+			os{ os }, procedure{ procedure }
+		{}
+
+		std::uint8_t const * Disassembler::decode_implied(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 1);
+			os << opCode << endl;
+			return current + 1;
+		}
+
+		std::uint8_t const * Disassembler::decode_immedidate(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" #$" << hex << setfill(L'0') << right << setw(2) << *value << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_accumulator(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 1);
+			os << opCode << L" A" << endl;
+			return current + 1;
+		}
+
+		std::uint8_t const * Disassembler::decode_absolute(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
+			os << opCode << L" " << procedure.formatAbsoluteAddress(current + 1) << endl;
+			return current + 3;
+		}
+
+		std::uint8_t const * Disassembler::decode_absoluteindirect(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
+			os << opCode << L" (" << procedure.formatAbsoluteAddress(current + 1) << L")" << endl;
+			return current + 3;
+		}
+
+		std::uint8_t const * Disassembler::decode_absoluteindirectindexed(std::wstring &opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
+			os << opCode << L" (" << procedure.formatAbsoluteAddress(current + 1) << L",X)" << endl;
+			return current + 3;
+		}
+
+		std::uint8_t const * Disassembler::decode_zeropage(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_zeropageindirect(std::wstring &opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L")" << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_absoluteindexedx(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
+			os << opCode << L" " << procedure.formatAbsoluteAddress(current + 1) << L",X" << endl;
+			return current + 3;
+		}
+
+		std::uint8_t const * Disassembler::decode_absoluteindexedy(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
+			os << opCode << L" " << procedure.formatAbsoluteAddress(current + 1) << L",Y" << endl;
+			return current + 3;
+		}
+
+		std::uint8_t const * Disassembler::decode_zeropageindexedx(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << L",X" << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_zeropageindexedy(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << L",Y" << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_relative(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_int8_t const *>(current + 1);
+			os << opCode << L" $" << hex << setfill(L'0') << right << setw(4) << distance(procedure.getProcBegin(), current + 2 + *value) << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_indexedindirect(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L",X)" << endl;
+			return current + 2;
+		}
+
+		std::uint8_t const * Disassembler::decode_indirectindexed(std::wstring & opCode, std::uint8_t const * current) const {
+			os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
+			auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
+			os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L"),Y" << endl;
+			return current + 2;
+		}
+
+		/* Dispatch for opcodes.  For each opcode, the table contains the mneumonic and a pointer
+		   the the correct method to decode the address mode.
+
+		   This vector is initialised with 6502 instructions only. Later, based on program options,
+		   it might be patched with opcodes for other processors. */
+		std::vector<Disassembler::decode_binding_t> Disassembler::dispatch = {
+			// 0x00
+			bind(&Disassembler::decode_implied, _1, wstring{ L"BRK" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"ASL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"PHP" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_accumulator, _1, wstring{ L"ASL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"ASL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x10
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BPL" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"ASL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"CLC" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"ORA" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"ASL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x20
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"JSR" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"BIT" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"ROL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"PLP" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_accumulator, _1, wstring{ L"ROL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"BIT" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"ROL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x30
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BMI" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"ROL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SEC" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"AND" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"ROL" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x40
+			bind(&Disassembler::decode_implied, _1, wstring{ L"RTI" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"LSR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"PHA" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_accumulator, _1, wstring{ L"LSR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"JMP" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"LSR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x50
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BVC" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"LSR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"CLI" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"EOR" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"LSR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x60
+			bind(&Disassembler::decode_implied, _1, wstring{ L"RTS" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"ROR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"PLA" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_accumulator, _1, wstring{ L"ROR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindirect, _1, wstring{ L"JMP" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"ROR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x70
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BVS" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"ROR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SEI" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"ADC" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"ROR" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x80
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"STY" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"STX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"DEY" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"TXA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"STY" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"STX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0x90
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BCC" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"STY" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_zeropageindexedy, _1, wstring{ L"STX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"TYA" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"TXS" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"STA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0xA0
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"LDY" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"LDX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"LDY" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"LDX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"TAY" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"TAX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"LDY" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"LDX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0xB0
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BCS" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"LDY" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_zeropageindexedy, _1, wstring{ L"LDX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"CLV" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"TSX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"LDY" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"LDA" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"LDX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0xC0
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"CPY" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"CPY" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"DEC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"INY" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"DEX" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"CPY" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"DEC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0xD0
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BNE" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"DEC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"CLD" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"CMP" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"DEC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0xE0
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"CPX" }, _2),
+			bind(&Disassembler::decode_indexedindirect, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"CPX" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_zeropage, _1, wstring{ L"INC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"INX" }, _2),
+			bind(&Disassembler::decode_immedidate, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"NOP" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"CPX" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_absolute, _1, wstring{ L"INC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			// 0xF0
+			bind(&Disassembler::decode_relative, _1, wstring{ L"BEQ" }, _2),
+			bind(&Disassembler::decode_indirectindexed, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"INC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"SED" }, _2),
+			bind(&Disassembler::decode_absoluteindexedy, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"SBC" }, _2),
+			bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"INC" }, _2),
+			bind(&Disassembler::decode_implied, _1, wstring{ L"???" }, _2),
+		};
+
+		/* Opcode patches for the dispatch table if the 65c02 is chosen. */
+		std::map<int, Disassembler::decode_binding_t> Disassembler::dispatch_65c02 = {
+			{0x04,bind(&Disassembler::decode_zeropage, _1, wstring{ L"TSB" }, _2)},
+			{0x0C,bind(&Disassembler::decode_absolute, _1, wstring{ L"TSB" }, _2)},
+			{0x12,bind(&Disassembler::decode_zeropageindirect, _1, wstring{ L"ORA" }, _2)},
+			{0x14,bind(&Disassembler::decode_zeropage, _1, wstring{ L"TRB" }, _2)},
+			{0x1A,bind(&Disassembler::decode_accumulator, _1, wstring{ L"INC" }, _2)},
+			{0x1C,bind(&Disassembler::decode_absolute, _1, wstring{ L"TRB" }, _2)},
+			{0x32,bind(&Disassembler::decode_zeropage, _1, wstring{ L"AND" }, _2)},
+			{0x34,bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"BIT" }, _2)},
+			{0x3A,bind(&Disassembler::decode_accumulator, _1, wstring{ L"DEC" }, _2)},
+			{0x3C,bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"BIT" }, _2)},
+			{0x52,bind(&Disassembler::decode_zeropage, _1, wstring{ L"EOR" }, _2)},
+			{0x5A,bind(&Disassembler::decode_implied, _1, wstring{ L"PHY" }, _2)},
+			{0x64,bind(&Disassembler::decode_zeropage, _1, wstring{ L"STZ" }, _2)},
+			{0x72,bind(&Disassembler::decode_zeropage, _1, wstring{ L"ADC" }, _2)},
+			{0x74,bind(&Disassembler::decode_zeropageindexedx, _1, wstring{ L"STZ" }, _2)},
+			{0x7A,bind(&Disassembler::decode_implied, _1, wstring{ L"PLY" }, _2)},
+			{0x7C,bind(&Disassembler::decode_absoluteindirectindexed, _1, wstring{ L"JMP" }, _2)},
+			{0x80,bind(&Disassembler::decode_relative, _1, wstring{ L"BRA" }, _2)},
+			{0x89,bind(&Disassembler::decode_immedidate, _1, wstring{ L"BIT" }, _2)},
+			{0x92,bind(&Disassembler::decode_zeropage, _1, wstring{ L"STA" }, _2)},
+			{0x9C,bind(&Disassembler::decode_absolute, _1, wstring{ L"STZ" }, _2)},
+			{0x9E,bind(&Disassembler::decode_absoluteindexedx, _1, wstring{ L"STZ" }, _2)},
+			{0xB2,bind(&Disassembler::decode_zeropage, _1, wstring{ L"LDA" }, _2)},
+			{0xD2,bind(&Disassembler::decode_zeropage, _1, wstring{ L"CMP" }, _2)},
+			{0xDA,bind(&Disassembler::decode_implied, _1, wstring{ L"PHX" }, _2)},
+			{0xF2,bind(&Disassembler::decode_zeropage, _1, wstring{ L"SBC" }, _2)},
+			{0xFA,bind(&Disassembler::decode_implied, _1, wstring{ L"PLX" }, _2)},
+		};
+
+		void Disassembler::initialiseCpu(cpu_t const cpu) {
+			if (cpu == cpu_t::_65c02) {
+				for (auto[instruction, patch] : dispatch_65c02) {
+					dispatch[instruction] = patch;
+				}
+			}
+		}
+
+		std::uint8_t const * Disassembler::decode(std::uint8_t const * current) const {
+			auto opcode = *current;
+			return dispatch[opcode](this, current);
 		}
 
 	}
@@ -108,324 +572,10 @@ namespace pcodedump {
 		}
 	}
 
-	/* Dispatch for opcodes.  For each opcode, the table contains the mneumonic and a pointer
-	   the the correct method to decode the address mode.
 	   
-	   This vector is initialised with 6502 instructions only. Later, based on program options,
-	   it might be patched with opcodes for other processors. */
-	std::vector<Native6502Procedure::dispatch_t> Native6502Procedure::dispatch = {
-		// 0x00
-		make_tuple(L"BRK", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"ASL", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"PHP", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"ASL", &Native6502Procedure::decode_accumulator),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_absolute),
-		make_tuple(L"ASL", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x10
-		make_tuple(L"BPL", &Native6502Procedure::decode_relative),
-		make_tuple(L"ORA", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"ASL", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CLC", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ORA", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"ASL", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x20
-		make_tuple(L"JSR", &Native6502Procedure::decode_absolute),
-		make_tuple(L"AND", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"BIT", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"AND", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"ROL", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"PLP", &Native6502Procedure::decode_implied),
-		make_tuple(L"AND", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"ROL", &Native6502Procedure::decode_accumulator),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"BIT", &Native6502Procedure::decode_absolute),
-		make_tuple(L"AND", &Native6502Procedure::decode_absolute),
-		make_tuple(L"ROL", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x30
-		make_tuple(L"BMI", &Native6502Procedure::decode_relative),
-		make_tuple(L"AND", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"AND", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"ROL", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"SEC", &Native6502Procedure::decode_implied),
-		make_tuple(L"AND", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"AND", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"ROL", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x40
-		make_tuple(L"RTI", &Native6502Procedure::decode_implied),
-		make_tuple(L"EOR", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"EOR", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"LSR", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"PHA", &Native6502Procedure::decode_implied),
-		make_tuple(L"EOR", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"LSR", &Native6502Procedure::decode_accumulator),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"JMP", &Native6502Procedure::decode_absolute),
-		make_tuple(L"EOR", &Native6502Procedure::decode_absolute),
-		make_tuple(L"LSR", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x50
-		make_tuple(L"BVC", &Native6502Procedure::decode_relative),
-		make_tuple(L"EOR", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"EOR", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"LSR", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CLI", &Native6502Procedure::decode_implied),
-		make_tuple(L"EOR", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"EOR", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"LSR", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x60
-		make_tuple(L"RTS", &Native6502Procedure::decode_implied),
-		make_tuple(L"ADC", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ADC", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"ROR", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"PLA", &Native6502Procedure::decode_implied),
-		make_tuple(L"ADC", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"ROR", &Native6502Procedure::decode_accumulator),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"JMP", &Native6502Procedure::decode_absoluteindirect),
-		make_tuple(L"ADC", &Native6502Procedure::decode_absolute),
-		make_tuple(L"ROR", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x70
-		make_tuple(L"BVS", &Native6502Procedure::decode_relative),
-		make_tuple(L"ADC", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ADC", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"ROR", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"SEI", &Native6502Procedure::decode_implied),
-		make_tuple(L"ADC", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"ADC", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"ROR", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x80
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"STA", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"STY", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"STA", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"STX", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"DEY", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"TXA", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"STY", &Native6502Procedure::decode_absolute),
-		make_tuple(L"STA", &Native6502Procedure::decode_absolute),
-		make_tuple(L"STX", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0x90
-		make_tuple(L"BCC", &Native6502Procedure::decode_relative),
-		make_tuple(L"STA", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"STY", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"STA", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"STX", &Native6502Procedure::decode_zeropageindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"TYA", &Native6502Procedure::decode_implied),
-		make_tuple(L"STA", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"TXS", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"STA", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0xA0
-		make_tuple(L"LDY", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"LDA", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"LDX", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"LDY", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"LDA", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"LDX", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"TAY", &Native6502Procedure::decode_implied),
-		make_tuple(L"LDA", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"TAX", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"LDY", &Native6502Procedure::decode_absolute),
-		make_tuple(L"LDA", &Native6502Procedure::decode_absolute),
-		make_tuple(L"LDX", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0xB0
-		make_tuple(L"BCS", &Native6502Procedure::decode_relative),
-		make_tuple(L"LDA", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"LDY", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"LDA", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"LDX", &Native6502Procedure::decode_zeropageindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CLV", &Native6502Procedure::decode_implied),
-		make_tuple(L"LDA", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"TSX", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"LDY", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"LDA", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"LDX", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0xC0
-		make_tuple(L"CPY", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"CMP", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CPY", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"CMP", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"DEC", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"INY", &Native6502Procedure::decode_implied),
-		make_tuple(L"CMP", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"DEX", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CPY", &Native6502Procedure::decode_absolute),
-		make_tuple(L"CMP", &Native6502Procedure::decode_absolute),
-		make_tuple(L"DEC", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0xD0
-		make_tuple(L"BNE", &Native6502Procedure::decode_relative),
-		make_tuple(L"CMP", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CMP", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"DEC", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CLD", &Native6502Procedure::decode_implied),
-		make_tuple(L"CMP", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CMP", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"DEC", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0xE0
-		make_tuple(L"CPX", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"SBC", &Native6502Procedure::decode_indexedindirect),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CPX", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"SBC", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"INC", &Native6502Procedure::decode_zeropage),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"INX", &Native6502Procedure::decode_implied),
-		make_tuple(L"SBC", &Native6502Procedure::decode_immedidate),
-		make_tuple(L"NOP", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"CPX", &Native6502Procedure::decode_absolute),
-		make_tuple(L"SBC", &Native6502Procedure::decode_absolute),
-		make_tuple(L"INC", &Native6502Procedure::decode_absolute),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		// 0xF0
-		make_tuple(L"BEQ", &Native6502Procedure::decode_relative),
-		make_tuple(L"SBC", &Native6502Procedure::decode_indirectindexed),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"SBC", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"INC", &Native6502Procedure::decode_zeropageindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"SED", &Native6502Procedure::decode_implied),
-		make_tuple(L"SBC", &Native6502Procedure::decode_absoluteindexedy),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-		make_tuple(L"SBC", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"INC", &Native6502Procedure::decode_absoluteindexedx),
-		make_tuple(L"???", &Native6502Procedure::decode_implied),
-	};
-
-	/* Opcode patches for the dispatch table if the 65c02 is chosen. */
-	std::map<int, Native6502Procedure::dispatch_t> Native6502Procedure::dispatch_65c02 = {
-		{0x04,make_tuple(L"TSB", &Native6502Procedure::decode_zeropage)},
-		{0x0C,make_tuple(L"TSB", &Native6502Procedure::decode_absolute)},
-		{0x12,make_tuple(L"ORA", &Native6502Procedure::decode_zeropageindirect)},
-		{0x14,make_tuple(L"TRB", &Native6502Procedure::decode_zeropage)},
-		{0x1A,make_tuple(L"INC", &Native6502Procedure::decode_accumulator)},
-		{0x1C,make_tuple(L"TRB", &Native6502Procedure::decode_absolute)},
-		{0x32,make_tuple(L"AND", &Native6502Procedure::decode_zeropage)},
-		{0x34,make_tuple(L"BIT", &Native6502Procedure::decode_zeropageindexedx)},
-		{0x3A,make_tuple(L"DEC", &Native6502Procedure::decode_accumulator)},
-		{0x3C,make_tuple(L"BIT", &Native6502Procedure::decode_absoluteindexedx)},
-		{0x52,make_tuple(L"EOR", &Native6502Procedure::decode_zeropage)},
-		{0x5A,make_tuple(L"PHY", &Native6502Procedure::decode_implied)},
-		{0x64,make_tuple(L"STZ", &Native6502Procedure::decode_zeropage)},
-		{0x72,make_tuple(L"ADC", &Native6502Procedure::decode_zeropage)},
-		{0x74,make_tuple(L"STZ", &Native6502Procedure::decode_zeropageindexedx)},
-		{0x7A,make_tuple(L"PLY", &Native6502Procedure::decode_implied)},
-		{0x7C,make_tuple(L"JMP", &Native6502Procedure::decode_absoluteindirectindexed)},
-		{0x80,make_tuple(L"BRA", &Native6502Procedure::decode_relative)},
-		{0x89,make_tuple(L"BIT", &Native6502Procedure::decode_immedidate)},
-		{0x92,make_tuple(L"STA", &Native6502Procedure::decode_zeropage)},
-		{0x9C,make_tuple(L"STZ", &Native6502Procedure::decode_absolute)},
-		{0x9E,make_tuple(L"STZ", &Native6502Procedure::decode_absoluteindexedx)},
-		{0xB2,make_tuple(L"LDA", &Native6502Procedure::decode_zeropage)},
-		{0xD2,make_tuple(L"CMP", &Native6502Procedure::decode_zeropage)},
-		{0xDA,make_tuple(L"PHX", &Native6502Procedure::decode_implied)},
-		{0xF2,make_tuple(L"SBC", &Native6502Procedure::decode_zeropage)},
-		{0xFA,make_tuple(L"PLX", &Native6502Procedure::decode_implied)},
-	};
-
 	/* Check the nominated CPU type, and patch the opcode decoding dispatch table if necessary. */
 	void Native6502Procedure::initialiseCpu(cpu_t const & cpu) {
-		if (cpu == cpu_t::_65c02) {
-			for (auto[instruction, dispatchUpdate] : dispatch_65c02) {
-				dispatch[instruction] = dispatchUpdate;
-			}
-		}
+		Disassembler::initialiseCpu(cpu);
 	}
 
 	void Native6502Procedure::writeHeader(std::wostream & os) const {
@@ -438,11 +588,11 @@ namespace pcodedump {
 
 	/* Write a disassembly of the procedure to an output stream. */
 	void Native6502Procedure::disassemble(std::wostream & os) const {
+		Disassembler disassember{ os, *this};
 		uint8_t const * ic = data.begin();
-		os << uppercase;
 		while (ic && ic < procEnd) {
-			auto[opcode, decode_function] = dispatch[*ic];
-			ic = (this->*decode_function)(os, opcode, ic);
+			printIc(os, ic);
+			ic = disassember.decode(ic);
 		}
 	}
 
@@ -459,117 +609,5 @@ namespace pcodedump {
 		os << hex << setfill(L'0') << right << setw(4) <<  current - this->getProcBegin() << L": ";
 	}
 
-	std::uint8_t const * Native6502Procedure::decode_implied(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 1);
-		os << opCode << endl;
-		return current + 1;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_immedidate(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" #$" << hex << setfill(L'0') << right << setw(2) << *value << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_accumulator(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 1);
-		os << opCode << L" A" << endl;
-		return current + 1;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_absolute(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		os << opCode << L" " << formatAbsoluteAddress(current + 1) << endl;
-		return current + 3;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_absoluteindirect(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		os << opCode << L" (" << formatAbsoluteAddress(current + 1) << L")" << endl;
-		return current + 3;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_absoluteindirectindexed(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		os << opCode << L" (" << formatAbsoluteAddress(current + 1) << L",X)" << endl;
-		return current + 3;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_zeropage(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_zeropageindirect(std::wostream& os, std::wstring &opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L")" << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_absoluteindexedx(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		os << opCode << L" " << formatAbsoluteAddress(current + 1) << L",X" << endl;
-		return current + 3;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_absoluteindexedy(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 3);
-		os << opCode << L" " << formatAbsoluteAddress(current + 1) << L",Y" << endl;
-		return current + 3;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_zeropageindexedx(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << L",X" << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_zeropageindexedy(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" $" << hex << setfill(L'0') << right << setw(2) << *value << L",Y" << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_relative(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_int8_t const *>(current + 1);
-		os << opCode << L" $" << hex << setfill(L'0') << right << setw(4) << distance(getProcBegin(), current + 2 + *value) << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_indexedindirect(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L",X)" << endl;
-		return current + 2;
-	}
-
-	std::uint8_t const * Native6502Procedure::decode_indirectindexed(std::wostream & os, std::wstring & opCode, std::uint8_t const * current) const {
-		printIc(os, current);
-		os << setfill(L' ') << left << setw(10) << toHexString(current, current + 2);
-		auto value = reinterpret_cast<little_uint8_t const *>(current + 1);
-		os << opCode << L" ($" << hex << setfill(L'0') << right << setw(2) << *value << L"),Y" << endl;
-		return current + 2;
-	}
 
 }
