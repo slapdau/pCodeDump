@@ -50,7 +50,7 @@ namespace pcodedump {
 
 		class Disassembler final {
 		public:
-			Disassembler(std::wostream & os, Native6502Procedure const & procedure);
+			Disassembler(std::wostream & os, Native6502Procedure const & procedure, linkref_map_t & linkage);
 
 			static void initialiseCpu(cpu_t const cpu);
 			std::uint8_t const * decode(std::uint8_t const * current) const;
@@ -81,10 +81,11 @@ namespace pcodedump {
 
 			std::wostream & os;
 			Native6502Procedure const & procedure;
+			linkref_map_t & linkage;
 		};
 
-		Disassembler::Disassembler(std::wostream & os, Native6502Procedure const & procedure) :
-			os{ os }, procedure{ procedure }
+		Disassembler::Disassembler(std::wostream & os, Native6502Procedure const & procedure, linkref_map_t & linkage) :
+			os{ os }, procedure{ procedure }, linkage{ linkage }
 		{}
 
 		std::uint8_t const * Disassembler::decode_implied(std::wstring & opCode, std::uint8_t const * current) const {
@@ -572,7 +573,7 @@ namespace pcodedump {
 		}
 	}
 
-	   
+
 	/* Check the nominated CPU type, and patch the opcode decoding dispatch table if necessary. */
 	void Native6502Procedure::initialiseCpu(cpu_t const & cpu) {
 		Disassembler::initialiseCpu(cpu);
@@ -587,8 +588,8 @@ namespace pcodedump {
 	}
 
 	/* Write a disassembly of the procedure to an output stream. */
-	void Native6502Procedure::disassemble(std::wostream & os) const {
-		Disassembler disassember{ os, *this};
+	void Native6502Procedure::disassemble(std::wostream & os, linkref_map_t & linkage) const {
+		Disassembler disassember{ os, *this, linkage };
 		uint8_t const * ic = data.begin();
 		while (ic && ic < procEnd) {
 			printIc(os, ic);

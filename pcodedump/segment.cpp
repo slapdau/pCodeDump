@@ -134,7 +134,7 @@ namespace pcodedump {
 	bool CodeSegment::showText = false;
 	bool CodeSegment::listProcs = false;
 	bool CodeSegment::showLinkage = false;
-
+	
 	CodeSegment::CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		Segment{ dictionaryEntry},
 		buffer{ buffer },
@@ -153,7 +153,7 @@ namespace pcodedump {
 			os << endl;
 		}
 		if (listProcs && codePart) {
-			codePart->disassemble(os);
+			codePart->disassemble(os, linkageInfo.get());
 			os << endl;
 		}
 		if (showLinkage && linkageInfo) {

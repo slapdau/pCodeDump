@@ -29,6 +29,10 @@
 namespace pcodedump {
 
 	class CodePart;
+	class LinkageInfo;
+	class LinkRecord;
+
+	using linkref_map_t = std::map<std::uint8_t const *, std::shared_ptr<LinkRecord const>>;
 
 	class Procedure {
 	public:
@@ -37,7 +41,7 @@ namespace pcodedump {
 		{}
 
 		virtual void writeHeader(std::wostream& os) const = 0;
-		virtual void disassemble(std::wostream& os) const = 0;
+		virtual void disassemble(std::wostream& os, linkref_map_t & linkage) const = 0;
 
 		virtual ~Procedure() = default;
 		
@@ -98,7 +102,7 @@ namespace pcodedump {
 		}
 
 		void writeHeader(std::wostream& os) const;
-		void disassemble(std::wostream& os) const;
+		void disassemble(std::wostream& os, LinkageInfo * linkageInfo) const;
 		Procedure const * findProcedure(std::uint8_t const * address) const;
 
 

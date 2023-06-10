@@ -133,6 +133,11 @@ namespace pcodedump {
 		}
 	}
 
+	std::vector<int> const LinkReference::getReferences() const
+	{
+		return references;
+	}
+
 	std::vector<int> LinkReference::extractReferences()
 	{
 		auto references = &fields.references;
@@ -254,7 +259,7 @@ namespace pcodedump {
 		}
 	}
 
-	shared_ptr<LinkRecord> readLinkRecord(CodeSegment & segment, uint8_t const * address) {
+	shared_ptr<LinkRecord const> readLinkRecord(CodeSegment & segment, uint8_t const * address) {
 		struct Header {
 			char name[8];
 			little_int16_t linkRecordType;
@@ -291,12 +296,12 @@ namespace pcodedump {
 		case LinkageType::sepFunc:
 			return make_shared<SeparateFunction>(name, &header.fieldsStart);
 		default:
-			return shared_ptr<LinkRecord>();
+			return shared_ptr<LinkRecord const>();
 		}
 	}
 
-	vector<shared_ptr<LinkRecord>> readLinkRecords(CodeSegment & segment, uint8_t const * linkageBase) {
-		vector<shared_ptr<LinkRecord>> result;
+	vector<shared_ptr<LinkRecord const>> readLinkRecords(CodeSegment & segment, uint8_t const * linkageBase) {
+		vector<shared_ptr<LinkRecord const>> result;
 		uint8_t const * currentBase = linkageBase;
 		do {
 			result.push_back(readLinkRecord(segment, currentBase));
@@ -325,4 +330,8 @@ namespace pcodedump {
 		}
 	}
 
+	std::vector<std::shared_ptr<LinkRecord const>> LinkageInfo::getLinkRecords() const
+	{
+		return linkRecords;
+	}
 }

@@ -19,6 +19,7 @@
 #include "native6502.hpp"
 #include "types.hpp"
 #include "segment.hpp"
+#include "linkage.hpp"
 #include <iterator>
 #include <cstddef>
 
@@ -90,10 +91,25 @@ namespace pcodedump {
 		return left->getProcBegin() < right->getProcBegin();
 	}
 
+	auto getCodeReferences(uint8_t const * codeBase, LinkageInfo * linkageInfo) {
+		linkref_map_t result;
+		if (linkageInfo != nullptr) {
+			for (auto linkRecord : linkageInfo->getLinkRecords()) {
+				auto linkReference = dynamic_cast<LinkReference const *>(linkRecord.get());
+				if (linkReference != nullptr) {
+					for (intptr_t reference : linkReference->getReferences()) {
+						result[codeBase + reference] = linkRecord;
+					}
+				}
+			}
+		}
+		return result;
+	}
+
 	bool CodePart::disasmProcs = false;
 	bool CodePart::treeProcs = false;
 
-	void CodePart::disassemble(std::wostream& os) const {
+	void CodePart::disassemble(std::wostream& os, LinkageInfo * linkageInfo) const {
 		if (treeProcs && treeRoot) {
 			treeRoot->writeOut(os, L"");
 			os << endl;
@@ -102,7 +118,8 @@ namespace pcodedump {
 			for (auto & procedure : *procedures) {
 				procedure->writeHeader(os);
 				if (disasmProcs) {
-					procedure->disassemble(os);
+					auto references = getCodeReferences(this->begin(), linkageInfo);
+					procedure->disassemble(os, references);
 					os << endl;
 				}
 			}

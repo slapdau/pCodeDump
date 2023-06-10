@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,7 +38,7 @@ namespace pcodedump {
 
 		class Disassembler final {
 		public:
-			Disassembler(std::wostream& os, PcodeProcedure const& procedure);
+			Disassembler(std::wostream& os, PcodeProcedure const& procedure, linkref_map_t& linkage);
 
 			std::uint8_t const* decode(std::uint8_t const* current) const;
 
@@ -67,167 +67,168 @@ namespace pcodedump {
 
 			std::wostream& os;
 			PcodeProcedure const& procedure;
+			linkref_map_t& linkage;
 		};
-			
-		Disassembler::Disassembler(std::wostream& os, PcodeProcedure const& procedure) :
-			os{ os }, procedure{ procedure }
+
+		Disassembler::Disassembler(std::wostream& os, PcodeProcedure const& procedure, linkref_map_t& linkage) :
+			os{ os }, procedure{ procedure }, linkage{ linkage }
 		{}
 
 		uint8_t const* Disassembler::decode_implied(wstring& opCode, uint8_t const* current) const {
-		os << opCode << endl;
+			os << opCode << endl;
 			return current;
-	}
+		}
 
-	/* ub */
+		/* ub */
 		uint8_t const* Disassembler::decode_unsignedByte(wstring& opCode, uint8_t const* current)  const {
-		os << setfill(L' ') << left << setw(9) << opCode << dec << *(current + 1) << endl;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << *(current + 1) << endl;
 			return current + 1;
-	}
+		}
 
-	/* b */
+		/* b */
 		uint8_t const* Disassembler::decode_big(wstring& opCode, uint8_t const* current)  const {
-		int value = *current++;
-		if (value & 0x80) {
-			value = ((value & 0x7f) << 8) + *current++;
+			int value = *current++;
+			if (value & 0x80) {
+				value = ((value & 0x7f) << 8) + *current++;
+			}
+			os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
+			return current;
 		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
-		return current;
-	}
 
-	/* db, b */
+		/* db, b */
 		uint8_t const* Disassembler::decode_intermediate(wstring& opCode, uint8_t const* current) const {
-		int linkCount = *current++;
-		int offset = *current++;
-		if (offset & 0x80) {
-			offset = ((offset & 0x7f) << 8) + *current++;
+			int linkCount = *current++;
+			int offset = *current++;
+			if (offset & 0x80) {
+				offset = ((offset & 0x7f) << 8) + *current++;
+			}
+			os << setfill(L' ') << left << setw(9) << opCode << dec << linkCount << L", " << offset << endl;
+			return current;
 		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << linkCount << L", " << offset << endl;
-		return current;
-	}
 
-	/* ub, b */
+		/* ub, b */
 		uint8_t const* Disassembler::decode_extended(wstring& opCode, uint8_t const* current)  const {
-		int dataSegment = *current++;
-		int offset = *current++;
-		if (offset & 0x80) {
-			offset = ((offset & 0x7f) << 8) + *current++;
+			int dataSegment = *current++;
+			int offset = *current++;
+			if (offset & 0x80) {
+				offset = ((offset & 0x7f) << 8) + *current++;
+			}
+			os << setfill(L' ') << left << setw(9) << opCode << dec << dataSegment << L", " << offset << endl;
+			return current;
 		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << dataSegment << L", " << offset << endl;
-		return current;
-	}
 
-	/* w */
+		/* w */
 		uint8_t const* Disassembler::decode_word(wstring& opCode, uint8_t const* current)  const {
 			little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
-		current += sizeof(little_int16_t);
-		os << setfill(L' ') << left << setw(9) << opCode << dec << *value << endl;
-		return current;
-	}
+			current += sizeof(little_int16_t);
+			os << setfill(L' ') << left << setw(9) << opCode << dec << *value << endl;
+			return current;
+		}
 
 		void convertToReal(std::wostream& os, little_int16_t const* words) {
-		uint16_t buf[2];
-		buf[1] = words[0];
-		buf[0] = words[1];
+			uint16_t buf[2];
+			buf[1] = words[0];
+			buf[0] = words[1];
 			os << *reinterpret_cast<float*>(buf);
-	}
+		}
 
-	/* ub, word aligned block of words */
+		/* ub, word aligned block of words */
 		uint8_t const* Disassembler::decode_wordBlock(wstring& opCode, uint8_t const* current)  const {
-		int total = *current;
-		if (reinterpret_cast<long long>(current) & 0x1) {
-			current++;
-		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << total;
-		if (total == 2) {
-			os << L"                    ; ";
+			int total = *current;
+			if (reinterpret_cast<long long>(current) & 0x1) {
+				current++;
+			}
+			os << setfill(L' ') << left << setw(9) << opCode << dec << total;
+			if (total == 2) {
+				os << L"                    ; ";
 				convertToReal(os, reinterpret_cast<little_int16_t const*>(current));
-		}
-		os << endl;
-		for (int count = 0; count != total; ++count) {
+			}
+			os << endl;
+			for (int count = 0; count != total; ++count) {
 				little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
-			current += sizeof(little_int16_t);
-			os << setfill(L' ') << setw(18) << L"" << *value << endl;
+				current += sizeof(little_int16_t);
+				os << setfill(L' ') << setw(18) << L"" << *value << endl;
+			}
+			return current;
 		}
-		return current;
-	}
 
-	/* ub, <chars> */
+		/* ub, <chars> */
 		uint8_t const* Disassembler::decode_stringConstant(wstring& opCode, uint8_t const* current) const {
-		uint8_t count = *current++;
-		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
+			uint8_t count = *current++;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
 			uint8_t const* finish = current + count;
-		FmtSentry<wostream::char_type> sentry{ wcout };
-		while (current != finish) {
+			FmtSentry<wostream::char_type> sentry{ wcout };
+			while (current != finish) {
 				uint8_t const* next = distance(current, finish) >= 80 ? current + 80 : finish;
-			wcout << L"                  ";
-			line_chardump(current, next);
-			current = next;
-			wcout << endl;
+				wcout << L"                  ";
+				line_chardump(current, next);
+				current = next;
+				wcout << endl;
+			}
+			return finish;
 		}
-		return finish;
-	}
 
-	/* ub, <bytes> */
+		/* ub, <bytes> */
 		uint8_t const* Disassembler::decode_packedConstant(wstring& opCode, uint8_t const* current) const {
-		uint8_t count = *current++;
-		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
-		hexdump(wstring{ L"                  " }, current, current + count);
-		current += count;
-		return current;
-	}
+			uint8_t count = *current++;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
+			hexdump(wstring{ L"                  " }, current, current + count);
+			current += count;
+			return current;
+		}
 
-	/* sb */
+		/* sb */
 		uint8_t const* Disassembler::decode_jump(wstring& opCode, uint8_t const* current) const {
-		auto offset = getNext<int8_t>(current);
-		intptr_t address;
-		if (offset >= 0) {
+			auto offset = getNext<int8_t>(current);
+			intptr_t address;
+			if (offset >= 0) {
 				address = (current + offset) - procedure.getProcBegin();
 			}
 			else {
 				address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
+			}
+			os << setfill(L' ') << left << setw(9) << opCode << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
+			return current;
 		}
-		os << setfill(L' ') << left << setw(9) << opCode << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
-		return current;
-	}
 
-	/* db */
+		/* db */
 		uint8_t const* Disassembler::decode_return(wstring& opCode, uint8_t const* current) const {
-		os << opCode << endl;
-		return nullptr;
-	}
-
-	/* ub, ub */
-		uint8_t const* Disassembler::decode_doubleByte(wstring& opCode, uint8_t const* current) const {
-		int value_1 = *current++;
-		int value_2 = *current++;
-		os << setfill(L' ') << left << setw(9) << opCode << dec << value_1 << L", " << value_2 << endl;
-		return current;
-	}
-
-	/* word aligned -> idx_min, idx_max, (uj sb), table */
-		uint8_t const* Disassembler::decode_case(wstring& opCode, uint8_t const* current)  const {
-		if (reinterpret_cast<uintptr_t>(current) & 0x1) {
-			current++;
+			os << opCode << endl;
+			return nullptr;
 		}
-		auto min = getNext<little_int16_t>(current);
-		auto max = getNext<little_int16_t>(current);
-		current++; // Skip the UJP opcode
-		auto offset = getNext<int8_t>(current);
-		intptr_t address;
-		if (offset >= 0) {
+
+		/* ub, ub */
+		uint8_t const* Disassembler::decode_doubleByte(wstring& opCode, uint8_t const* current) const {
+			int value_1 = *current++;
+			int value_2 = *current++;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << value_1 << L", " << value_2 << endl;
+			return current;
+		}
+
+		/* word aligned -> idx_min, idx_max, (uj sb), table */
+		uint8_t const* Disassembler::decode_case(wstring& opCode, uint8_t const* current)  const {
+			if (reinterpret_cast<uintptr_t>(current) & 0x1) {
+				current++;
+			}
+			auto min = getNext<little_int16_t>(current);
+			auto max = getNext<little_int16_t>(current);
+			current++; // Skip the UJP opcode
+			auto offset = getNext<int8_t>(current);
+			intptr_t address;
+			if (offset >= 0) {
 				address = (current + offset) - procedure.getProcBegin();
 			}
 			else {
 				address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
-		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;
-		for (int count = min; count != max + 1; ++count) {
+			}
+			os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;
+			for (int count = min; count != max + 1; ++count) {
 				address = derefSelfPtr(current) - procedure.getProcBegin();
-			getNext<little_int16_t>(current);
-			os << setfill(L' ') << setw(18) << L"" << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
+				getNext<little_int16_t>(current);
+				os << setfill(L' ') << setw(18) << L"" << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
+			}
+			return current;
 		}
-		return current;
-	}
 
 		map<int, wstring> standardProcs = {
 			{ 0, L"iocheck" },
@@ -270,55 +271,55 @@ namespace pcodedump {
 			{ 40, L"memavail" },
 		};
 
-	/* CSP ub */
+		/* CSP ub */
 		uint8_t const* Disassembler::decode_callStandardProc(wstring& opCode, uint8_t const* current)  const {
-		int standardProcNumber = *current++;
-		os << setfill(L' ') << left << setw(9) << opCode << dec << setw(6) << standardProcNumber;
-		if (standardProcs.count(standardProcNumber)) {
-			os << L"; " << standardProcs[standardProcNumber];
+			int standardProcNumber = *current++;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << setw(6) << standardProcNumber;
+			if (standardProcs.count(standardProcNumber)) {
+				os << L"; " << standardProcs[standardProcNumber];
+			}
+			os << endl;
+			return current;
 		}
-		os << endl;
-		return current;
-	}
 
-	/* 2-reals, 4-strings, 6-booleans, 8-sets, 10-byte arrays, 12-words. 10 and 12 have b as well */
+		/* 2-reals, 4-strings, 6-booleans, 8-sets, 10-byte arrays, 12-words. 10 and 12 have b as well */
 		uint8_t const* Disassembler::decode_compare(wstring& opCode, uint8_t const* current)  const {
-		os << opCode << L" ";
-		switch (*current++) {
-		case 2:
-			os << L"REAL" << endl;
-			break;
-		case 4:
-			os << L"STR" << endl;
-			break;
-		case 6:
-			os << L"BOOL" << endl;
-			break;
-		case 8:
-			os << L"SET" << endl;
-			break;
-		case 10: {
-			int byteCount = *current++;
-			if (byteCount & 0x80) {
-				byteCount = ((byteCount & 0x7f) << 8) + *current++;
+			os << opCode << L" ";
+			switch (*current++) {
+			case 2:
+				os << L"REAL" << endl;
+				break;
+			case 4:
+				os << L"STR" << endl;
+				break;
+			case 6:
+				os << L"BOOL" << endl;
+				break;
+			case 8:
+				os << L"SET" << endl;
+				break;
+			case 10: {
+				int byteCount = *current++;
+				if (byteCount & 0x80) {
+					byteCount = ((byteCount & 0x7f) << 8) + *current++;
+				}
+				os << L"BYTE " << dec << byteCount << endl;
+				break;
 			}
-			os << L"BYTE " << dec << byteCount << endl;
-			break;
-		}
-		case 12: {
-			int byteCount = *current++;
-			if (byteCount & 0x80) {
-				byteCount = ((byteCount & 0x7f) << 8) + *current++;
+			case 12: {
+				int byteCount = *current++;
+				if (byteCount & 0x80) {
+					byteCount = ((byteCount & 0x7f) << 8) + *current++;
+				}
+				os << L"WORD " << dec << byteCount << endl;
+				break;
 			}
-			os << L"WORD " << dec << byteCount << endl;
-			break;
+			default:
+				os << L"<undefined> (0x" << hex << setfill(L'0') << right << setw(2) << *(current - 1) << L")" << endl;
+				break;
+			}
+			return current;
 		}
-		default:
-			os << L"<undefined> (0x" << hex << setfill(L'0') << right << setw(2) << *(current - 1) << L")" << endl;
-			break;
-		}
-		return current;
-	}
 
 		vector<Disassembler::decode_binding_t> Disassembler::dispatch = {
 			bind(&Disassembler::decode_implied, _1, wstring{ L"SDLC_0" }, _2),
@@ -615,8 +616,8 @@ namespace pcodedump {
 		os << endl;
 	}
 
-	void PcodeProcedure::disassemble(std::wostream& os) const {
-		Disassembler disassember{ os, *this};
+	void PcodeProcedure::disassemble(std::wostream& os, linkref_map_t& linkage) const {
+		Disassembler disassember{ os, *this, linkage };
 		uint8_t const* ic = data.begin();
 		while (ic && ic < data.end()) {
 			printIc(os, ic);

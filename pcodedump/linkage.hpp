@@ -55,6 +55,7 @@ namespace pcodedump {
 		std::uint8_t const * end() const override final;
 		void writeOut(std::wostream & os) const override;
 		void writeReferences(std::wostream & os) const;
+		std::vector<int> const getReferences() const;
 
 	private:
 		std::vector<int> extractReferences();
@@ -188,8 +189,10 @@ namespace pcodedump {
 
 		void write(std::wostream& os) const;
 
+		std::vector<std::shared_ptr<LinkRecord const>> getLinkRecords() const;
+
 	private:
-		std::vector<std::shared_ptr<LinkRecord>> linkRecords;
+		std::vector<std::shared_ptr<LinkRecord const>> linkRecords;
 	};
 
 }

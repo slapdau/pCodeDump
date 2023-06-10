@@ -48,7 +48,7 @@ namespace pcodedump {
 		}
 
 		void writeHeader(std::wostream& os) const override;
-		void disassemble(std::wostream& os) const override;
+		void disassemble(std::wostream& os, linkref_map_t & linkage) const override;
 
 	private:
 		using Relocations = std::vector<std::uint8_t const *>;
