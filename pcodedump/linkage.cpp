@@ -89,6 +89,11 @@ namespace pcodedump {
 		os << L"  " << name << L" " << setfill(L' ') << left << setw(20) << linkRecordType() << L" ";
 	}
 
+	std::wstring LinkRecord::getName() const
+	{
+		return name;
+	}
+
 	struct LinkReference::Fields {
 		boost::endian::little_int16_t format;
 		boost::endian::little_int16_t numberOfReferences;

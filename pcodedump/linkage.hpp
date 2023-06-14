@@ -37,6 +37,7 @@ namespace pcodedump {
 		virtual std::uint8_t const * end() const;
 		virtual LinkageType linkRecordType() const = 0;
 		virtual void writeOut(std::wostream & os) const;
+		std::wstring getName() const;
 
 	private:
 		std::wstring name;

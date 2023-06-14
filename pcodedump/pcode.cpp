@@ -19,6 +19,7 @@
 #include "types.hpp"
 #include "textio.hpp"
 #include "options.hpp"
+#include "linkage.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -86,12 +87,17 @@ namespace pcodedump {
 		}
 
 		/* b */
-		uint8_t const* Disassembler::decode_big(wstring& opCode, uint8_t const* current)  const {
-			int value = *current++;
-			if (value & 0x80) {
-				value = ((value & 0x7f) << 8) + *current++;
+		uint8_t const * Disassembler::decode_big(wstring &opCode, uint8_t const * current)  const {
+			if (linkage.count(current)) {
+				os << setfill(L' ') << left << setw(9) << opCode << dec << linkage[current]->getName() << endl;
+				current += 2;
+			} else {
+				int value = *current++;
+				if (value & 0x80) {
+					value = ((value & 0x7f) << 8) + *current++;
+				}
+				os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
 			}
-			os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
 			return current;
 		}
 
