@@ -85,7 +85,7 @@ namespace pcodedump {
 					"CPU type for disassembled native code:\n"
 					"  6502\n"
 					"  65c02")
-					("link", bool_switch(&CodeSegment::showLinkage), "Display linker information");
+				("link", bool_switch(&CodeSegment::showLinkage), "Display linker information");
 			options_description allopts{ "All options" };
 			allopts.add_options()
 				("input-file", value<string>(&filename), "");
