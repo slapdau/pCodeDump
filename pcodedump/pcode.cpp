@@ -1,5 +1,5 @@
 /*
-   Copyright 2017 Craig McGeachie
+   Copyright 2017-2023 Craig McGeachie
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

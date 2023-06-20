@@ -1,11 +1,11 @@
 /*
-   Copyright 2017 Craig McGeachie
+   Copyright 2017-2023 Craig McGeachie
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -85,7 +85,7 @@ namespace pcodedump {
 					"CPU type for disassembled native code:\n"
 					"  6502\n"
 					"  65c02")
-					("link", bool_switch(&CodeSegment::showLinkage), "Display linker information");
+				("link", bool_switch(&CodeSegment::showLinkage), "Display linker information");
 			options_description allopts{ "All options" };
 			allopts.add_options()
 				("input-file", value<string>(&filename), "");
