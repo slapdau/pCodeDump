@@ -21,6 +21,7 @@
 #include <map>
 #include <iomanip>
 #include <memory>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 using namespace boost::endian;
@@ -91,7 +92,7 @@ namespace pcodedump {
 
 	std::wstring LinkRecord::getName() const
 	{
-		return name;
+		return boost::trim_copy(name);
 	}
 
 	struct LinkReference::Fields {
