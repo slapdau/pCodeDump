@@ -503,7 +503,7 @@ namespace pcodedump {
 
 	void Native6502Procedure::Disassembler::initialiseCpu(cpu_t const cpu) {
 		if (cpu == cpu_t::_65c02) {
-			for (auto[instruction, patch] : dispatch_65c02) {
+			for (auto&[instruction, patch] : dispatch_65c02) {
 				dispatch[instruction] = patch;
 			}
 		}

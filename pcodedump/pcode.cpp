@@ -129,7 +129,7 @@ namespace pcodedump {
 	}
 
 	void convertToReal(std::wostream& os, little_int16_t const* words) {
-		uint16_t buf[2];
+		uint16_t buf[2] = {};
 		buf[1] = words[0];
 		buf[0] = words[1];
 		os << *reinterpret_cast<float*>(buf);

@@ -330,7 +330,7 @@ namespace pcodedump {
 	void LinkageInfo::write(std::wostream & os) const
 	{
 		os << L"Linkage records:" << endl;
-		for (auto record : linkRecords) {
+		for (auto & record : linkRecords) {
 			os << *record;
 		}
 	}
