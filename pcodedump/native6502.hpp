@@ -63,13 +63,14 @@ namespace pcodedump {
 		uint8_t const * procEnd;
 
 	public:
-		std::wstring formatAbsoluteAddress(std::uint8_t const * address) const;
 
 	private:
 		Relocations baseRelocations;
 		Relocations segRelocations;
 		Relocations procRelocations;
 		Relocations interpRelocations;
+		
+		class Disassembler;
 	};
 
 }

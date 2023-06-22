@@ -62,6 +62,8 @@ namespace pcodedump {
 
 	private:
 		AttributeTable const * attributeTable;
+
+		class Disassembler;
 	};
 
 }
