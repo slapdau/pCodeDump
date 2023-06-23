@@ -544,7 +544,7 @@ namespace pcodedump {
 		if (pcodedump::contains(procedure.segRelocations, address)) {
 			uint8_t const * target = procedure.codePart.begin() + value;
 			Procedure const * targetProc = procedure.codePart.findProcedure(target);
-			if (targetProc) {
+			if (targetProc && !linkage.count(address)) {
 				value = static_cast<int>(target - targetProc->getProcBegin());
 				result << L".proc#" << dec << targetProc->getProcedureNumber() << L"+";
 			} else {
@@ -561,7 +561,15 @@ namespace pcodedump {
 		} else if (pcodedump::contains(procedure.procRelocations, address)) {
 			result << L".proc+";
 		}
-		result << L"$" << uppercase << hex << setfill(L'0') << right << setw(4) << value;
+		if (linkage.count(address)) {
+			result << L"<" << linkage[address]->getName() << L">";
+		}
+		if (linkage.count(address) && value != 0) {
+			result << L"+";
+		} 
+		if (!linkage.count(address) || value != 0) {
+			result << L"$" << uppercase << hex << setfill(L'0') << right << setw(4) << value;
+		}
 		return result.str();
 	}
 
