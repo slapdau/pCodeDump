@@ -202,9 +202,16 @@ namespace pcodedump {
 
 	/* ub, ub */
 	uint8_t const* PcodeProcedure::Disassembler::decode_doubleByte(wstring& opCode, uint8_t const* current) const {
-		int value_1 = *current++;
-		int value_2 = *current++;
-		os << setfill(L' ') << left << setw(9) << opCode << dec << value_1 << L", " << value_2 << endl;
+		if (linkage.count(current)) {
+			auto segName = linkage[current]->getName();
+			current++;
+			int value_2 = *current++;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << L"<" << segName << L">, " << value_2 << endl;
+		} else {
+			int value_1 = *current++;
+			int value_2 = *current++;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << value_1 << L", " << value_2 << endl;
+		}
 		return current;
 	}
 
