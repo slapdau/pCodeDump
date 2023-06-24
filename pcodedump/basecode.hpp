@@ -60,11 +60,19 @@ namespace pcodedump {
 		}
 
 		template<typename AT, typename PT>
-		PT* align(PT* pointer) const {
+		inline PT* align(PT* pointer) const {
 			size_t space = data.end() - reinterpret_cast<uint8_t const*>(pointer);
-			void* result = const_cast<uint8_t*>(pointer);
+			void* result = pointer;
 			std::align(sizeof(AT), sizeof(AT), result, space);
 			return reinterpret_cast<PT*>(result);
+		}
+
+		template<typename AT, typename PT>
+		inline PT const * align(PT const * pointer) const {
+			size_t space = data.end() - reinterpret_cast<uint8_t const*>(pointer);
+			void* result = const_cast<PT*>(pointer);
+			std::align(sizeof(AT), sizeof(AT), result, space);
+			return reinterpret_cast<PT const *>(result);
 		}
 
 	protected:
