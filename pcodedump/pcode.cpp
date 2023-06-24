@@ -137,7 +137,7 @@ namespace pcodedump {
 
 	/* ub, word aligned block of words */
 	uint8_t const* PcodeProcedure::Disassembler::decode_wordBlock(wstring& opCode, uint8_t const* current)  const {
-		int total = *current;
+		int total = *current++;
 		if (reinterpret_cast<long long>(current) & 0x1) {
 			current++;
 		}
