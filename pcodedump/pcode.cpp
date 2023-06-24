@@ -86,7 +86,7 @@ namespace pcodedump {
 	/* b */
 	uint8_t const * PcodeProcedure::Disassembler::decode_big(wstring &opCode, uint8_t const * current)  const {
 		if (linkage.count(current)) {
-			os << setfill(L' ') << left << setw(9) << opCode << dec << linkage[current]->getName() << endl;
+			os << setfill(L' ') << left << setw(9) << opCode << L"<" << linkage[current]->getName() << L">" << endl;
 			current += 2;
 		} else {
 			int value = *current++;
