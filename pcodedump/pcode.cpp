@@ -128,27 +128,31 @@ namespace pcodedump {
 		return current;
 	}
 
-	void convertToReal(std::wostream& os, little_int16_t const* words) {
+	float convertToReal(uint8_t const* buff) {
+		auto words = reinterpret_cast<little_int16_t const*>(buff);
 		uint16_t buf[2] = {};
 		buf[1] = words[0];
 		buf[0] = words[1];
-		os << *reinterpret_cast<float*>(buf);
+		return *reinterpret_cast<float*>(buf);
 	}
 
 	/* ub, word aligned block of words */
 	uint8_t const* PcodeProcedure::Disassembler::decode_wordBlock(wstring& opCode, uint8_t const* current)  const {
 		int total = *current++;
 		current = procedure.align<little_int16_t>(current);
-		os << setfill(L' ') << left << setw(9) << opCode << dec << total;
+		os << setfill(L' ') << left << setw(9) << opCode << dec << setw(9) << total;
 		if (total == 2) {
-			os << L"                    ; ";
-			convertToReal(os, reinterpret_cast<little_int16_t const*>(current));
+			os << L"; As a real value: " << convertToReal(current);
 		}
 		os << endl;
 		for (int count = 0; count != total; ++count) {
 			little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
 			current += sizeof(little_int16_t);
-			os << setfill(L' ') << setw(18) << L"" << *value << endl;
+			os
+				<< setfill(L' ') << setw(18) << L""
+				<< setfill(L' ') << left << dec << setw(9) << *value
+				<< L"; $" << setfill(L'0') << hex << setw(4) << *value
+				<< endl;
 		}
 		return current;
 	}
