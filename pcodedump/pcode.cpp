@@ -138,9 +138,7 @@ namespace pcodedump {
 	/* ub, word aligned block of words */
 	uint8_t const* PcodeProcedure::Disassembler::decode_wordBlock(wstring& opCode, uint8_t const* current)  const {
 		int total = *current++;
-		if (reinterpret_cast<long long>(current) & 0x1) {
-			current++;
-		}
+		current = procedure.align<little_int16_t>(current);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << total;
 		if (total == 2) {
 			os << L"                    ; ";
@@ -217,9 +215,7 @@ namespace pcodedump {
 
 	/* word aligned -> idx_min, idx_max, (uj sb), table */
 	uint8_t const* PcodeProcedure::Disassembler::decode_case(wstring& opCode, uint8_t const* current)  const {
-		if (reinterpret_cast<uintptr_t>(current) & 0x1) {
-			current++;
-		}
+		current = procedure.align<little_int16_t>(current);
 		auto min = getNext<little_int16_t>(current);
 		auto max = getNext<little_int16_t>(current);
 		current++; // Skip the UJP opcode
@@ -227,8 +223,7 @@ namespace pcodedump {
 		intptr_t address;
 		if (offset >= 0) {
 			address = (current + offset) - procedure.getProcBegin();
-		}
-		else {
+		} else {
 			address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
 		}
 		os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;

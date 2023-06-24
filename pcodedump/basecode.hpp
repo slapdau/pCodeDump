@@ -59,6 +59,14 @@ namespace pcodedump {
 			return data.begin() <= address && address < data.end();
 		}
 
+		template<typename AT, typename PT>
+		PT* align(PT* pointer) const {
+			size_t space = data.end() - reinterpret_cast<uint8_t const*>(pointer);
+			void* result = const_cast<uint8_t*>(pointer);
+			std::align(sizeof(AT), sizeof(AT), result, space);
+			return reinterpret_cast<PT*>(result);
+		}
+
 	protected:
 		CodePart const & codePart;
 		int const procedureNumber;
