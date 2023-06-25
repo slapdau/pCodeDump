@@ -15,6 +15,7 @@
 */
 
 #include "text.hpp"
+#include "types.hpp"
 #include <string>
 #include <tuple>
 #include <locale>
@@ -23,8 +24,8 @@ using namespace std;
 
 namespace pcodedump {
 
-	InterfaceText::InterfaceText(CodeSegment & segment, const uint8_t * text) :
-		segment{ segment }, text{ text }
+	InterfaceText::InterfaceText(CodeSegment & segment, const uint8_t * begin, const uint8_t * end) :
+		segment{ segment }, begin{ begin }, end{ end }
 	{
 	}
 
@@ -37,33 +38,38 @@ namespace pcodedump {
 			locale loc{};
 			return toupper<charT>(left, loc) == toupper<charT>(right, loc);
 		}
+	}
 
-		tuple<wstring, const uint8_t *> readline(const uint8_t * input) {
-			wstring result{};
-			uint8_t next;
+	tuple<wstring, const uint8_t *> InterfaceText::readline(const uint8_t * input) const {
+		wstring result{};
+		uint8_t next;
+		next = *input++;
+		if (next == 0x10) {
+			int count = (*input++) - 32;
+			result.insert(std::end(result), count, L' ');
 			next = *input++;
-			if (next == 0x10) {
-				int count = (*input++) - 32;
-				result.insert(end(result), count, L' ');
-				next = *input++;
-			}
-			while (next != '\r') {
-				result.push_back(next);
-				if (result.size() >= implementation.size()) {
-					if (equal(begin(implementation), end(implementation), end(result) - implementation.size(), compareNoCase<wchar_t>)) {
-						result.erase(result.size() - implementation.size(), implementation.size());
-						return make_tuple(result, nullptr);
-					}
-				}
-				next = *input++;
-			}
-			return make_tuple(result, input);
 		}
-
+		while (next != 0x0D) {
+			result.push_back(next);
+			if (result.size() >= implementation.size()) {
+				if (equal(std::begin(implementation), std::end(implementation), std::end(result) - implementation.size(), compareNoCase<wchar_t>)) {
+					result.erase(result.size() - implementation.size(), implementation.size());
+					return make_tuple(result, nullptr);
+				}
+			}
+			next = *input++;
+		}
+		if (*input == 0x00) {
+			// Align to next block.
+			size_t distance = input - begin;
+			distance = distance + BLOCK_SIZE - distance % BLOCK_SIZE;
+			input = begin + distance;
+		}
+		return make_tuple(result, input);
 	}
 
 	void InterfaceText::write(std::wostream& os) const {
-		auto current = text;
+		auto current = begin;
 		while (current) {
 			wstring line;
 			tie(line, current) = readline(current);

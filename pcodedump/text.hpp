@@ -19,6 +19,8 @@
 
 #include <cstdint>
 #include <iostream>
+#include <tuple>
+#include <string>
 
 namespace pcodedump {
 
@@ -26,11 +28,15 @@ namespace pcodedump {
 
 	class InterfaceText {
 	public:
-		InterfaceText(CodeSegment & segment, const std::uint8_t * text);
+		InterfaceText(CodeSegment & segment, const std::uint8_t * begin, const std::uint8_t * end);
 		void write(std::wostream& os) const;
+
 	private:
+		std::tuple<std::wstring, const uint8_t*> readline(const uint8_t* input) const;
+
 		CodeSegment const & segment;
-		const std::uint8_t * text;
+		const std::uint8_t * begin;
+		const std::uint8_t * end;
 	};
 
 }

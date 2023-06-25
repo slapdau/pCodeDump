@@ -187,7 +187,11 @@ namespace pcodedump {
 	/* Create a new interface text segment if this directry entry points to one. */
 	unique_ptr<InterfaceText> CodeSegment::createInterfaceText() {
 		if (dictionaryEntry.textAddress()) {
-			return make_unique<InterfaceText>(*this, buffer.data() + dictionaryEntry.textAddress() * BLOCK_SIZE);
+			return make_unique<InterfaceText>(
+				*this,
+				buffer.data() + dictionaryEntry.textAddress() * BLOCK_SIZE,
+				buffer.data() + dictionaryEntry.codeAddress() * BLOCK_SIZE
+			);
 		} else {
 			return unique_ptr<InterfaceText>();
 		}
