@@ -26,7 +26,7 @@ namespace pcodedump {
 	extern std::string filename;
 	extern cpu_t cpu;
 
-	bool parseOptions(int argc, char *argv[], char *envp[]);
+	bool parseOptions(int argc, char *argv[]);
 
 }
 

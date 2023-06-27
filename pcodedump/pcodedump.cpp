@@ -22,20 +22,27 @@
 #include <fstream>
 #include <string>
 #include <memory>
-
+#include <filesystem>
+#include <stdexcept>
+#include <system_error>
 
 using namespace std;
 
 namespace {
 	using pcodedump::buff_t;
 
-	unique_ptr<buff_t const> readFile(string filename) {
+	unique_ptr<buff_t const> readFile(filesystem::path filename) {
 		using file_t = std::ifstream;
 	    using iterator_t = istreambuf_iterator<file_t::char_type>;
+
+		if (!filesystem::is_regular_file(filename)) {
+			throw runtime_error(string("File not found: ") + filename.string());
+		}
 
 	    file_t file(filename, ios_base::binary);
 		file.exceptions(ifstream::failbit);
 		auto buffer = make_unique<buff_t>();
+		buffer->reserve(filesystem::file_size(filename));
 		buffer->assign(iterator_t(file), iterator_t());
 		file.close();
 		return buffer;
@@ -43,18 +50,21 @@ namespace {
 }
 
 int
-main(int argc, char *argv[], char *envp[]) {
+main(int argc, char *argv[]) {
 	using namespace pcodedump;
 
 	try {
-		if (parseOptions(argc, argv, envp)) {
+		if (parseOptions(argc, argv)) {
 			auto buffer = readFile(filename);
 			PcodeFile file{*buffer};
 			wcout << file;
 		}
 		return 0;
-	} catch (ios::failure &ex) {
-		cout << ex.code().message() << endl;
+	} catch (system_error &ex) {
+		cout << ex.what() << ": " << ex.code().message() << endl;
+		return 1;
+	} catch (exception& ex) {
+		cout << ex.what() << endl;
 		return 1;
 	}
 }

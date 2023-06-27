@@ -68,7 +68,7 @@ namespace pcodedump {
 
 	/* Parse program options and store the values in global values. Return true if the program
 	   should then continue processing. */
-	bool parseOptions(int argc, char *argv[], char *envp[]) {
+	bool parseOptions(int argc, char *argv[]) {
 		using namespace boost::program_options;
 
 		try {
