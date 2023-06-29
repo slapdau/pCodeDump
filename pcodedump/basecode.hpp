@@ -23,6 +23,7 @@
 #include <memory>
 #include <optional>
 #include <tuple>
+#include <type_traits>
 #include <boost/endian/arithmetic.hpp>
 #include "types.hpp"
 
@@ -62,17 +63,9 @@ namespace pcodedump {
 		template<typename AT, typename PT>
 		inline PT* align(PT* pointer) const {
 			size_t space = data.end() - reinterpret_cast<uint8_t const*>(pointer);
-			void* result = pointer;
+			void* result = const_cast<std::remove_const<PT>::type*>(pointer);
 			std::align(sizeof(AT), sizeof(AT), result, space);
 			return reinterpret_cast<PT*>(result);
-		}
-
-		template<typename AT, typename PT>
-		inline PT const * align(PT const * pointer) const {
-			size_t space = data.end() - reinterpret_cast<uint8_t const*>(pointer);
-			void* result = const_cast<PT*>(pointer);
-			std::align(sizeof(AT), sizeof(AT), result, space);
-			return reinterpret_cast<PT const *>(result);
 		}
 
 	protected:
