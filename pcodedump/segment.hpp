@@ -120,7 +120,7 @@ namespace pcodedump {
 		}
 
 		virtual int getFirstBlock() const = 0;
-		virtual std::wostream& writeOut(std::wostream&) const = 0;
+		virtual std::wostream& writeOut(std::wostream&) const;
 
 	protected:
 		SegmentDictionaryEntry const dictionaryEntry;
@@ -136,7 +136,6 @@ namespace pcodedump {
 		int getFirstBlock() const override {
 			return 0;
 		}
-		std::wostream& writeOut(std::wostream&) const override;
 	};
 	
 	class CodePart;

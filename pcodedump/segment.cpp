@@ -127,20 +127,20 @@ namespace pcodedump {
 	Segment::~Segment() {
 	}
 
-	DataSegment::DataSegment(SegmentDictionaryEntry const dictionaryEntry) :
-		Segment{ dictionaryEntry }
-	{
-	}
-
-	std::wostream & DataSegment::writeOut(std::wostream & os) const
+	std::wostream& Segment::writeOut(std::wostream& os) const
 	{
 		FmtSentry<wostream::char_type> sentry{ os };
 
 		os << "Segment " << dec << dictionaryEntry.segmentNumber() << L": ";
 		os << dictionaryEntry.name() << L" (" << dictionaryEntry.segmentKind() << L")" << endl;
-		os << L"        Length : " << dictionaryEntry.codeLength() << endl;
 		os << L"  Segment info : version=" << dictionaryEntry.version() << ", mType=" << dictionaryEntry.machineType() << endl;
+		os << L"        Length : " << dictionaryEntry.codeLength() << endl;
 		return os;
+	}
+
+	DataSegment::DataSegment(SegmentDictionaryEntry const dictionaryEntry) :
+		Segment{ dictionaryEntry }
+	{
 	}
 
 	std::wostream& operator<<(std::wostream& os, const Segment & segment) {
@@ -209,9 +209,9 @@ namespace pcodedump {
 	}
 
 	void CodeSegment::writeHeader(std::wostream& os) const {
+		Segment::writeOut(os);
+
 		FmtSentry<wostream::char_type> sentry{ os };
-		os << "Segment " << dec << dictionaryEntry.segmentNumber() << L": ";
-		os << dictionaryEntry.name() << L" (" << dictionaryEntry.segmentKind() << L")" << endl;
 		os << L"   Text blocks : ";
 		if (dictionaryEntry.textAddress()) {
 			os << dictionaryEntry.textAddress() << L" - " << dictionaryEntry.codeAddress() - 1 << endl;
@@ -230,8 +230,6 @@ namespace pcodedump {
 		} else {
 			os << L"-----" << endl;
 		}
-		os << L"        Length : " << dictionaryEntry.codeLength() << endl;
-		os << L"  Segment info : version=" << dictionaryEntry.version() << ", mType=" << dictionaryEntry.machineType() << endl;
 		if (this->codePart.get() != nullptr) {
 			this->codePart->writeHeader(os);
 		}
