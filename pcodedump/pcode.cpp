@@ -166,7 +166,7 @@ namespace pcodedump {
 		while (current != finish) {
 			uint8_t const* next = distance(current, finish) >= 80 ? current + 80 : finish;
 			wcout << L"                  ";
-			line_chardump(current, next);
+			line_chardump(wcout, current, next);
 			current = next;
 			wcout << endl;
 		}
@@ -177,7 +177,7 @@ namespace pcodedump {
 	uint8_t const* PcodeProcedure::Disassembler::decode_packedConstant(wstring& opCode, uint8_t const* current) const {
 		uint8_t count = *current++;
 		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
-		hexdump(wstring{ L"                  " }, current, current + count);
+		hexdump(wcout, L"                  " , current, current + count);
 		current += count;
 		return current;
 	}

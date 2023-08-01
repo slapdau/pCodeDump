@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <string>
 #include <ios>
+#include <iostream>
 #include "types.hpp"
 
 namespace pcodedump {
@@ -49,19 +50,19 @@ namespace pcodedump {
 		ios_t &stream;
 	};
 
-	void line_hexdump(std::uint8_t const * start, std::uint8_t const * finish);
+	void line_hexdump(std::wostream & out, std::uint8_t const * start, std::uint8_t const * finish);
 
-	void line_chardump(std::uint8_t const * start, std::uint8_t const * finish);
+	void line_chardump(std::wostream & out, std::uint8_t const * start, std::uint8_t const * finish);
 
-	void hexdump(std::wstring leader, std::uint8_t const * start, std::uint8_t const * finish);
+	void hexdump(std::wostream & out, std::wstring const & leader, std::uint8_t const * start, std::uint8_t const * finish);
 
-	void line_hexdump(buff_t::iterator start, buff_t::iterator finish);
+	void line_hexdump(std::wostream & out, buff_t::const_iterator start, buff_t::const_iterator finish);
 
-	void line_chardump(buff_t::iterator start, buff_t::iterator finish);
+	void line_chardump(std::wostream & out, buff_t::const_iterator start, buff_t::const_iterator finish);
 
-	void hexdump(std::wstring leader, buff_t::iterator start, buff_t::iterator finish);
+	void hexdump(std::wostream & out, std::wstring const & leader, buff_t::const_iterator start, buff_t::const_iterator finish);
 
-	void hexdump(buff_t &buffer);
+	void hexdump(std::wostream & out, buff_t const & buffer);
 
 }
 
