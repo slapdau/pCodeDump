@@ -17,10 +17,13 @@
 #ifndef _AC0A2AE0_F573_45FA_950F_F3D898D9994E
 #define _AC0A2AE0_F573_45FA_950F_F3D898D9994E
 
+#include <new>
 #include <vector>
 #include <cstdint>
+#include <cstddef>
 #include <fstream>
 #include <iterator>
+
 #include <boost/endian/arithmetic.hpp>
 
 namespace pcodedump {
@@ -52,12 +55,12 @@ namespace pcodedump {
         constexpr AlignedAllocator(AlignedAllocator<U, ALIGNMENT> const&) noexcept {}
 
         static constexpr size_type max_size() {
-            return numeric_limits<std::size_t>::max() / sizeof(T);
+            return std::numeric_limits<std::size_t>::max() / sizeof(T);
         }
 
         [[nodiscard]] T* allocate(std::size_t n) {
             if (n > max_size()) {
-                throw bad_array_new_length();
+                throw std::bad_array_new_length();
             }
             return reinterpret_cast<T*>(::operator new[](n * sizeof(T), ALIGNMENT));
         }
