@@ -79,8 +79,9 @@ namespace pcodedump {
 
 	/* ub */
 	uint8_t const* PcodeProcedure::Disassembler::decode_unsignedByte(wstring& opCode, uint8_t const* current)  const {
-		os << setfill(L' ') << left << setw(9) << opCode << dec << *(current + 1) << endl;
-		return current + 1;
+		auto value = getNext<uint8_t>(current);
+		os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
+		return current;
 	}
 
 	/* b */
