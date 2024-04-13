@@ -79,13 +79,6 @@ namespace pcodedump {
 	}
 
 	template <typename T>
-	T getNext(std::uint8_t const * & address) {
-		T val = * reinterpret_cast<T const *>(address);
-		address += sizeof(T);
-		return val;
-	}
-
-	template <typename T>
 	class Range {
 	public:
 		Range() : m_begin{ nullptr }, m_end{ nullptr } {}

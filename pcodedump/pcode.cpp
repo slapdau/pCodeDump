@@ -32,6 +32,25 @@ using namespace std;
 using namespace std::placeholders;
 using namespace boost::endian;
 
+namespace {
+
+	template <typename T>
+	inline T getNext(std::uint8_t const *& address) {
+		T val = *reinterpret_cast<T const *>(address);
+		address += sizeof(T);
+		return val;
+	}
+
+	inline int16_t getNextBig(std::uint8_t const *& address) {
+		int16_t val = getNext<uint8_t>(address);
+		if (val & 0x80) {
+			val = ((val & 0x7f) << 8) + getNext<uint8_t>(address);
+		}
+		return val;
+	}
+
+}
+
 namespace pcodedump {
 
 	class PcodeProcedure::Disassembler final {
@@ -41,6 +60,9 @@ namespace pcodedump {
 		std::uint8_t const* decode(std::uint8_t const* current) const;
 
 	private:
+		inline intptr_t getNextJumpAddress(std::uint8_t const *& address) const;
+		inline intptr_t getNextCaseAddress(std::uint8_t const *& address) const;
+
 		std::uint8_t const* decode_implied(std::wstring& opCode, std::uint8_t const* current) const;
 		std::uint8_t const* decode_unsignedByte(std::wstring& opCode, std::uint8_t const* current) const;
 		std::uint8_t const* decode_big(std::wstring& opCode, std::uint8_t const* current) const;
@@ -72,6 +94,23 @@ namespace pcodedump {
 		os{ os }, procedure{ procedure }, linkage{ linkage }
 	{}
 
+	inline intptr_t PcodeProcedure::Disassembler::getNextJumpAddress(std::uint8_t const *& address) const {
+		auto offset = getNext<int8_t>(address);
+		if (offset >= 0) {
+			return (address + offset) - procedure.getProcBegin();
+		} else {
+			return derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
+		}
+
+	}
+
+	inline intptr_t PcodeProcedure::Disassembler::getNextCaseAddress(std::uint8_t const *& address) const
+	{
+		auto result = derefSelfPtr(address) - procedure.getProcBegin();
+		address += 2;
+		return result;
+	}
+
 	uint8_t const* PcodeProcedure::Disassembler::decode_implied(wstring& opCode, uint8_t const* current) const {
 		os << opCode << endl;
 		return current;
@@ -79,8 +118,7 @@ namespace pcodedump {
 
 	/* ub */
 	uint8_t const* PcodeProcedure::Disassembler::decode_unsignedByte(wstring& opCode, uint8_t const* current)  const {
-		auto value = getNext<uint8_t>(current);
-		os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
+		os << setfill(L' ') << left << setw(9) << opCode << dec << getNext<uint8_t>(current) << endl;
 		return current;
 	}
 
@@ -90,42 +128,30 @@ namespace pcodedump {
 			os << setfill(L' ') << left << setw(9) << opCode << L"<" << linkage[current]->getName() << L">" << endl;
 			current += 2;
 		} else {
-			int value = *current++;
-			if (value & 0x80) {
-				value = ((value & 0x7f) << 8) + *current++;
-			}
-			os << setfill(L' ') << left << setw(9) << opCode << dec << value << endl;
+			os << setfill(L' ') << left << setw(9) << opCode << dec << getNextBig(current) << endl;
 		}
 		return current;
 	}
 
 	/* db, b */
 	uint8_t const* PcodeProcedure::Disassembler::decode_intermediate(wstring& opCode, uint8_t const* current) const {
-		int linkCount = *current++;
-		int offset = *current++;
-		if (offset & 0x80) {
-			offset = ((offset & 0x7f) << 8) + *current++;
-		}
+		auto linkCount = getNext<uint8_t>(current);
+		auto offset = getNextBig(current);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << linkCount << L", " << offset << endl;
 		return current;
 	}
 
 	/* ub, b */
 	uint8_t const* PcodeProcedure::Disassembler::decode_extended(wstring& opCode, uint8_t const* current)  const {
-		int dataSegment = *current++;
-		int offset = *current++;
-		if (offset & 0x80) {
-			offset = ((offset & 0x7f) << 8) + *current++;
-		}
+		auto dataSegment = getNext<uint8_t>(current);
+		auto offset = getNextBig(current);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << dataSegment << L", " << offset << endl;
 		return current;
 	}
 
 	/* w */
 	uint8_t const* PcodeProcedure::Disassembler::decode_word(wstring& opCode, uint8_t const* current)  const {
-		little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
-		current += sizeof(little_int16_t);
-		os << setfill(L' ') << left << setw(9) << opCode << dec << *value << endl;
+		os << setfill(L' ') << left << setw(9) << opCode << dec << getNext<little_int16_t>(current) << endl;
 		return current;
 	}
 
@@ -139,7 +165,7 @@ namespace pcodedump {
 
 	/* ub, word aligned block of words */
 	uint8_t const* PcodeProcedure::Disassembler::decode_wordBlock(wstring& opCode, uint8_t const* current)  const {
-		int total = *current++;
+		auto total = getNext<uint8_t>(current);
 		current = procedure.align<little_int16_t>(current);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << setw(9) << total;
 		if (total == 2) {
@@ -147,12 +173,11 @@ namespace pcodedump {
 		}
 		os << endl;
 		for (int count = 0; count != total; ++count) {
-			little_int16_t const* value = reinterpret_cast<little_int16_t const*>(current);
-			current += sizeof(little_int16_t);
+			auto value = getNext<little_int16_t>(current);
 			os
 				<< setfill(L' ') << setw(18) << L""
-				<< setfill(L' ') << left << dec << setw(9) << *value
-				<< L"; $" << setfill(L'0') << hex << setw(4) << *value
+				<< setfill(L' ') << left << dec << setw(9) << value
+				<< L"; $" << setfill(L'0') << hex << setw(4) << value
 				<< endl;
 		}
 		return current;
@@ -160,9 +185,9 @@ namespace pcodedump {
 
 	/* ub, <chars> */
 	uint8_t const* PcodeProcedure::Disassembler::decode_stringConstant(wstring& opCode, uint8_t const* current) const {
-		uint8_t count = *current++;
-		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
-		uint8_t const* finish = current + count;
+		auto total = getNext<uint8_t>(current);
+		os << setfill(L' ') << left << setw(9) << opCode << dec << total << endl;
+		uint8_t const* finish = current + total;
 		FmtSentry<wostream::char_type> sentry{ wcout };
 		while (current != finish) {
 			uint8_t const* next = distance(current, finish) >= 80 ? current + 80 : finish;
@@ -176,7 +201,7 @@ namespace pcodedump {
 
 	/* ub, <bytes> */
 	uint8_t const* PcodeProcedure::Disassembler::decode_packedConstant(wstring& opCode, uint8_t const* current) const {
-		uint8_t count = *current++;
+		auto count = getNext<uint8_t>(current);
 		os << setfill(L' ') << left << setw(9) << opCode << dec << count << endl;
 		hexdump(wcout, L"                  " , current, current + count);
 		current += count;
@@ -185,15 +210,7 @@ namespace pcodedump {
 
 	/* sb */
 	uint8_t const* PcodeProcedure::Disassembler::decode_jump(wstring& opCode, uint8_t const* current) const {
-		auto offset = getNext<int8_t>(current);
-		intptr_t address;
-		if (offset >= 0) {
-			address = (current + offset) - procedure.getProcBegin();
-		}
-		else {
-			address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
-		}
-		os << setfill(L' ') << left << setw(9) << opCode << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
+		os << setfill(L' ') << left << setw(9) << opCode << L"(" << hex << setfill(L'0') << right << setw(4) << getNextJumpAddress(current) << L")" << endl;
 		return current;
 	}
 
@@ -207,35 +224,26 @@ namespace pcodedump {
 	uint8_t const* PcodeProcedure::Disassembler::decode_doubleByte(wstring& opCode, uint8_t const* current) const {
 		if (linkage.count(current)) {
 			auto segName = linkage[current]->getName();
-			current++;
-			int value_2 = *current++;
+			current += 1;
+			auto value_2 = getNext<uint8_t>(current);
 			os << setfill(L' ') << left << setw(9) << opCode << dec << L"<" << segName << L">, " << value_2 << endl;
 		} else {
-			int value_1 = *current++;
-			int value_2 = *current++;
+			auto value_1 = getNext<uint8_t>(current);
+			auto value_2 = getNext<uint8_t>(current);
 			os << setfill(L' ') << left << setw(9) << opCode << dec << value_1 << L", " << value_2 << endl;
 		}
 		return current;
 	}
 
-	/* word aligned -> idx_min, idx_max, (uj sb), table */
+	/* word aligned -> idx_min, idx_max, (ujp sb), table */
 	uint8_t const* PcodeProcedure::Disassembler::decode_case(wstring& opCode, uint8_t const* current)  const {
 		current = procedure.align<little_int16_t>(current);
 		auto min = getNext<little_int16_t>(current);
 		auto max = getNext<little_int16_t>(current);
 		current++; // Skip the UJP opcode
-		auto offset = getNext<int8_t>(current);
-		intptr_t address;
-		if (offset >= 0) {
-			address = (current + offset) - procedure.getProcBegin();
-		} else {
-			address = derefSelfPtr(procedure.jtab(offset)) - procedure.getProcBegin();
-		}
-		os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << address << ")" << endl;
+		os << setfill(L' ') << left << setw(9) << opCode << dec << min << ", " << max << " (" << hex << setfill(L'0') << right << setw(4) << getNextJumpAddress(current) << ")" << endl;
 		for (int count = min; count != max + 1; ++count) {
-			address = derefSelfPtr(current) - procedure.getProcBegin();
-			getNext<little_int16_t>(current);
-			os << setfill(L' ') << setw(18) << L"" << L"(" << hex << setfill(L'0') << right << setw(4) << address << L")" << endl;
+			os << setfill(L' ') << setw(18) << L"" << L"(" << hex << setfill(L'0') << right << setw(4) << getNextCaseAddress(current) << L")" << endl;
 		}
 		return current;
 	}
