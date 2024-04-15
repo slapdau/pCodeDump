@@ -84,7 +84,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB);..\pcodedump\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>textio.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>textio.obj;pcode.obj;linkage.obj;segment.obj;basecode.obj;text.obj;native6502.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -104,7 +104,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB);..\pcodedump\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>textio.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>textio.obj;pcode.obj;linkage.obj;segment.obj;basecode.obj;text.obj;native6502.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -120,7 +120,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB);..\pcodedump\$(Platform)\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>textio.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>textio.obj;pcode.obj;linkage.obj;segment.obj;basecode.obj;text.obj;native6502.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -140,10 +140,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(BOOST_LIB);..\pcodedump\$(Platform)\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>textio.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>textio.obj;pcode.obj;linkage.obj;segment.obj;basecode.obj;text.obj;native6502.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="pcode_tests.cpp" />
     <ClCompile Include="textio_tests.cpp" />
     <ClCompile Include="pCodeTests.cpp" />
   </ItemGroup>

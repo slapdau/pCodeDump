@@ -66,7 +66,8 @@ namespace pcodedump {
 		class Disassembler;
 	};
 
-}
+	float convertToReal(std::uint8_t const * buff);
 
+}
 
 #endif // !_00C6B89A_AA9B_40A8_8753_1DBCAD25C429

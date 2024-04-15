@@ -27,6 +27,7 @@
 #include <map>
 #include <cstdint>
 #include <functional>
+#include <algorithm>
 
 using namespace std;
 using namespace std::placeholders;
@@ -155,12 +156,18 @@ namespace pcodedump {
 		return current;
 	}
 
-	float convertToReal(uint8_t const* buff) {
-		auto words = reinterpret_cast<little_int16_t const*>(buff);
-		uint16_t buf[2] = {};
-		buf[1] = words[0];
-		buf[0] = words[1];
-		return *reinterpret_cast<float*>(buf);
+	/* Convert four bytes to real, taking into account the reversed order of words in the block.
+	   
+	 The real value when loaded on to stack will be a 32 bit little-endian float.
+	 However, the words in the word block are in reverse order with respect to the
+	 order they will be on the stack. Therefore, the words need to be reversed before the
+	 little-endian float is converted.
+	 */
+	float convertToReal(uint8_t const * buff) {
+		auto original = reinterpret_cast<little_int16_t const *>(buff);
+		little_int16_t reversedCopy[2] = {};
+		reverse_copy(original, original + 2, reversedCopy);
+		return *reinterpret_cast<little_float32_t *>(reversedCopy);
 	}
 
 	/* ub, word aligned block of words */
