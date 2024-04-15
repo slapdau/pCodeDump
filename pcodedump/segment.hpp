@@ -55,23 +55,23 @@ namespace pcodedump {
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
 	class SegmentDictionary {
-	public:
 		friend class SegmentDictionaryEntry;
+	public:
+		static constexpr int NUM_SEGMENTS = 16;
+		SegmentDictionaryEntry const operator[](int index) const;
 
 		uint64_t intrinsicSegments() const;
 		std::wstring fileComment() const;
-
-		SegmentDictionaryEntry const operator[](int index) const;
 
 	private:
 		struct {
 			boost::endian::little_int16_t codeaddr;
 			boost::endian::little_int16_t codeleng;
-		} diskInfo[16];
-		char segName[16][8];
-		boost::endian::little_int16_t segKind[16];
-		boost::endian::little_int16_t textAddr[16];
-		boost::endian::little_int16_t segInfo[16];
+		} diskInfo[NUM_SEGMENTS];
+		char segName[NUM_SEGMENTS][8];
+		boost::endian::little_int16_t segKind[NUM_SEGMENTS];
+		boost::endian::little_int16_t textAddr[NUM_SEGMENTS];
+		boost::endian::little_int16_t segInfo[NUM_SEGMENTS];
 		boost::endian::little_uint64_t intrinsicSegs;
 		boost::endian::little_uint16_t filler[68];
 		char comment[80];

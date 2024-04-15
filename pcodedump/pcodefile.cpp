@@ -58,7 +58,7 @@ namespace pcodedump {
 	unique_ptr<Segments> PcodeFile::extractSegments() {
 
 		vector<SegmentDictionaryEntry> dictionaryEntries;
-		for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
+		for (int directoryIndex = 0; directoryIndex != SegmentDictionary::NUM_SEGMENTS; ++directoryIndex) {
 			if (segmentDictionary[directoryIndex].codeAddress() != 0) {
 				dictionaryEntries.push_back(segmentDictionary[directoryIndex]);
 			}
@@ -73,7 +73,7 @@ namespace pcodedump {
 			currentEnd = dictionaryEntry.startAddress();
 		}
 
-		for (int directoryIndex = 0; directoryIndex != 16; ++directoryIndex) {
+		for (int directoryIndex = 0; directoryIndex != SegmentDictionary::NUM_SEGMENTS; ++directoryIndex) {
 			if (segmentDictionary[directoryIndex].codeAddress() == 0 && segmentDictionary[directoryIndex].codeLength() != 0) {
 				segments->push_back(make_shared<DataSegment>(segmentDictionary[directoryIndex]));
 			}
