@@ -1,4 +1,4 @@
 pcodedump
-Copyright 2017 Craig McGeachie.
+Copyright 2017-2024 Craig McGeachie.
 
 See LICENSE.txt for terms and conditions.
