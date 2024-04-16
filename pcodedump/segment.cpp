@@ -22,6 +22,7 @@
 #include "options.hpp"
 #include <map>
 #include <cassert>
+#include <stdexcept>
 
 using namespace std;
 using namespace boost::endian;
@@ -43,7 +44,11 @@ namespace pcodedump {
 
 	SegmentDictionaryEntry::SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index) :
 		segmentDictionary{ segmentDictionary }, index{ index }
-	{}
+	{
+		if (0 > index || index >= SegmentDictionary::NUM_SEGMENTS) {
+			throw out_of_range("Segment dictionary index out of bounds: " + index);
+		}
+	}
 
 	int SegmentDictionaryEntry::codeAddress() const {
 		return segmentDictionary->diskInfo[index].codeaddr;
