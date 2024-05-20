@@ -34,13 +34,24 @@ namespace pcodedump {
 		return intrinsicSegs;
 	}
 
-	std::wstring SegmentDictionary::fileComment() const {
+	wstring SegmentDictionary::fileComment() const {
 		int size = comment[0];
 		return wstring{ comment + 1, comment + 1 + size };
 	}
 
-	SegmentDictionaryEntry const SegmentDictionary::operator[](int index) const {
+	SegmentDictionaryEntry SegmentDictionary::operator[](int index) const {
+		if (index < 0 || index >= SegmentDictionary::NUM_SEGMENTS) {
+			throw out_of_range("Segment index out of range: " + index);
+		}
 		return SegmentDictionaryEntry{ this, index };
+	}
+
+	SegmentDictionary::const_iterator SegmentDictionary::begin() const {
+		return SegmentDictionaryIterator(this, 0);
+	}
+
+	SegmentDictionary::const_iterator SegmentDictionary::end() const {
+		return SegmentDictionaryIterator(this, SegmentDictionary::NUM_SEGMENTS);
 	}
 
 	SegmentDictionaryEntry::SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index) :
@@ -48,6 +59,9 @@ namespace pcodedump {
 	{
 		if (0 > index || index >= SegmentDictionary::NUM_SEGMENTS) {
 			throw out_of_range("Segment dictionary index out of bounds: " + index);
+		}
+		if (segmentDictionary == nullptr) {
+			throw invalid_argument("Segment dictionary is null");
 		}
 	}
 
@@ -89,6 +103,66 @@ namespace pcodedump {
 
 	int SegmentDictionaryEntry::linkageAddress() const {
 		return codeAddress() + codeLength() / BLOCK_SIZE + 1;
+	}
+
+	SegmentDictionaryEntry const * SegmentDictionaryEntry::operator->() const
+	{
+		return this;
+	}
+
+	SegmentDictionaryIterator::SegmentDictionaryIterator() : segmentDictionary{}, index{} {}
+
+	SegmentDictionaryIterator::SegmentDictionaryIterator(SegmentDictionary const * segmentDictionary, int index) :
+		segmentDictionary{ segmentDictionary }, index{ index }
+	{
+		if (0 > index || index > SegmentDictionary::NUM_SEGMENTS) {
+			throw out_of_range("Segment dictionary index out of bounds: " + index);
+		}
+		if (segmentDictionary == nullptr) {
+			throw invalid_argument("Segment dictionary is null");
+		}
+	}
+
+	SegmentDictionaryIterator::value_type SegmentDictionaryIterator::operator*() const
+	{
+		if (nullptr == segmentDictionary) {
+			throw logic_error("Dereferencng a null SegmentDictionaryIterator");
+		}
+		return SegmentDictionaryEntry(segmentDictionary, index);
+	}
+
+	SegmentDictionaryIterator::value_type SegmentDictionaryIterator::operator->() const
+	{
+		return this->operator*();
+	}
+	
+	bool SegmentDictionaryIterator::isPastLast() const {
+		return nullptr == this->segmentDictionary || this->index == SegmentDictionary::NUM_SEGMENTS;
+	}
+
+	bool operator==(SegmentDictionaryIterator const & lhs, SegmentDictionaryIterator const & rhs) {
+		return
+			// Special case: all end pointers are equal regardless of container
+			(lhs.isPastLast() && rhs.isPastLast()) ||
+			// Standard case
+			(lhs.segmentDictionary == rhs.segmentDictionary && lhs.index == rhs.index);
+	}
+
+	bool operator!=(SegmentDictionaryIterator const & lhs, SegmentDictionaryIterator const & rhs) {
+		return !(lhs == rhs);
+	}
+
+	SegmentDictionaryIterator & SegmentDictionaryIterator::operator++() {
+		if (!this->isPastLast()) {
+			++index;
+		}
+		return *this;
+	}
+
+	SegmentDictionaryIterator SegmentDictionaryIterator::operator++(int) {
+		auto temporary = *this;
+		++(*this);
+		return temporary;
 	}
 
 	map<SegmentKind, wstring> segKind = {

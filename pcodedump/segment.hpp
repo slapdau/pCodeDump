@@ -22,6 +22,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <iterator>
 #include <vector>
 #include <boost/endian/arithmetic.hpp>
 
@@ -55,11 +56,17 @@ namespace pcodedump {
 
 	std::wostream& operator<<(std::wostream& os, const MachineType& value);
 
+	class SegmentDictionaryIterator;
+
 	class SegmentDictionary {
 		friend class SegmentDictionaryEntry;
 	public:
+		using const_iterator = SegmentDictionaryIterator;
+
 		static constexpr int NUM_SEGMENTS = 16;
-		SegmentDictionaryEntry const operator[](int index) const;
+		SegmentDictionaryEntry operator[](int index) const;
+		const_iterator begin() const;
+		const_iterator end() const;
 
 		uint64_t intrinsicSegments() const;
 		std::wstring fileComment() const;
@@ -80,6 +87,7 @@ namespace pcodedump {
 
 	class SegmentDictionaryEntry {
 		friend class SegmentDictionary;
+		friend class SegmentDictionaryIterator;
 
 	private:
 		SegmentDictionaryEntry(SegmentDictionary const * segmentDictionary, int index);
@@ -97,10 +105,46 @@ namespace pcodedump {
 
 		int startAddress() const;
 		int linkageAddress() const;
+
+	public:
+		SegmentDictionaryEntry const * operator->() const;
+
 	private:
 		SegmentDictionary const * segmentDictionary;
 		int index;
 	};
+
+	class SegmentDictionaryIterator {
+		friend class SegmentDictionary;
+
+	public:
+		using value_type = SegmentDictionaryEntry;
+		using difference_type = std::ptrdiff_t;
+		using pointer = value_type *;
+		using reference = value_type &;
+		using iterator_category = std::forward_iterator_tag;
+
+	private:
+		SegmentDictionaryIterator(SegmentDictionary const * segmentDictionary, int index);
+
+	public:
+		SegmentDictionaryIterator();
+
+		value_type operator*() const;
+		value_type operator->() const;
+		friend bool operator==(SegmentDictionaryIterator const & lhs, SegmentDictionaryIterator const & rhs);
+		SegmentDictionaryIterator & operator++();
+		SegmentDictionaryIterator operator++(int);
+
+	private:
+		bool isPastLast() const;
+
+	private:
+		SegmentDictionary const * segmentDictionary;
+		int index;
+	};
+
+	bool operator!=(SegmentDictionaryIterator const & lhs, SegmentDictionaryIterator const & rhs);
 
 	class Segment {
 	public:

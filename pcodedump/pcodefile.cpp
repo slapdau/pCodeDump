@@ -34,11 +34,11 @@ namespace pcodedump {
 	{
 	}
 
-	bool reverseAddressOrder(SegmentDictionaryEntry const & left, SegmentDictionaryEntry const & right) {
+	bool descendingStartAddress(SegmentDictionaryEntry & left, SegmentDictionaryEntry & right) {
 		return left.startAddress() > right.startAddress();
 	}
 
-	bool segmentNumberOrder(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
+	bool segmentNumber(shared_ptr<Segment const> left, shared_ptr<Segment const> right) {
 		return left->getSegmentNumber() < right->getSegmentNumber();
 	}
 
@@ -56,30 +56,21 @@ namespace pcodedump {
 	   as [begin, end), so the block number returned is actually one block past the end block of
 	   the segment.  For the last segment in a file, this block number be past the end of the file. */
 	unique_ptr<Segments> PcodeFile::extractSegments() {
-
-		vector<SegmentDictionaryEntry> dictionaryEntries;
-		for (int directoryIndex = 0; directoryIndex != SegmentDictionary::NUM_SEGMENTS; ++directoryIndex) {
-			if (segmentDictionary[directoryIndex].codeAddress() != 0) {
-				dictionaryEntries.push_back(segmentDictionary[directoryIndex]);
-			}
-		}
-
-		sort(begin(dictionaryEntries), end(dictionaryEntries), reverseAddressOrder);
-
+		vector<SegmentDictionaryEntry> dictionaryEntries(cbegin(segmentDictionary), cend(segmentDictionary));
+		sort(begin(dictionaryEntries), end(dictionaryEntries), descendingStartAddress);
 		auto segments = make_unique<Segments>();
-		int currentEnd = static_cast<int>(((buffer.size() - 1) / BLOCK_SIZE + 1));
-		for (auto dictionaryEntry : dictionaryEntries) {
-			segments->push_back(make_shared<CodeSegment>(buffer, dictionaryEntry, currentEnd));
-			currentEnd = dictionaryEntry.startAddress();
-		}
+		int currentEnd = static_cast<int>((buffer.size() - 1) / BLOCK_SIZE + 1);
 
-		for (int directoryIndex = 0; directoryIndex != SegmentDictionary::NUM_SEGMENTS; ++directoryIndex) {
-			if (segmentDictionary[directoryIndex].codeAddress() == 0 && segmentDictionary[directoryIndex].codeLength() != 0) {
-				segments->push_back(make_shared<DataSegment>(segmentDictionary[directoryIndex]));
+		for (auto & dictionaryEntry : dictionaryEntries) {
+			if (dictionaryEntry.codeAddress() != 0) {
+				segments->push_back(make_shared<CodeSegment>(buffer, dictionaryEntry, currentEnd));
+				currentEnd = dictionaryEntry.startAddress();
+			} else if (dictionaryEntry.codeLength() != 0) {
+				segments->push_back(make_shared<DataSegment>(dictionaryEntry));
 			}
 		}
 
-		sort(begin(*segments), end(*segments), segmentNumberOrder);
+		sort(begin(*segments), end(*segments), segmentNumber);
 		return segments;
 	}
 
