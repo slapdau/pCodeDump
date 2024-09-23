@@ -217,6 +217,7 @@ namespace pcodedump {
 		Segment::writeOut(os);
 
 		FmtSentry<wostream::char_type> sentry{ os };
+		os << dec;
 		os << L"   Text blocks : ";
 		if (dictionaryEntry.textAddress()) {
 			os << dictionaryEntry.textAddress() << L" - " << dictionaryEntry.codeAddress() - 1 << endl;
