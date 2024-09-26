@@ -20,6 +20,7 @@
 #include <ostream>
 #include <string>
 #include <algorithm>
+#include <vector>
 #include <iterator>
 #include <map>
 #include <functional>
@@ -78,6 +79,7 @@ namespace pcodedump {
 			opts.add_options()
 				("help", bool_switch(&help), "Display this message")
 				("text", bool_switch(&CodeSegment::showText), "Display interface text")
+				("seg", value<vector<int>>(&CodeSegment::segments), "Restrict segment detail to specified segment")
 				("procs", bool_switch(&CodeSegment::listProcs), "Display segment procedures")
 				("tree", bool_switch(&CodePart::treeProcs), "Display procedure nesting (implies procs)")
 				("disasm", bool_switch(&CodePart::disasmProcs), "Display code disassembly (implies procs)")

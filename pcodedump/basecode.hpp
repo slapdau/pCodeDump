@@ -121,6 +121,7 @@ namespace pcodedump {
 		std::shared_ptr<ScopeNode> extractTree();
 
 	private:
+		CodeSegment & segment;
 		Range<std::uint8_t const> data;
 		ProcedureDictionary const & procDict;
 		std::unique_ptr<Procedures const> procedures;

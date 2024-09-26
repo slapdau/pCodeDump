@@ -23,6 +23,7 @@
 #include <map>
 #include <cassert>
 #include <stdexcept>
+#include <algorithm>
 
 using namespace std;
 using namespace boost::endian;
@@ -155,6 +156,7 @@ namespace pcodedump {
 	bool CodeSegment::showText = false;
 	bool CodeSegment::listProcs = false;
 	bool CodeSegment::showLinkage = false;
+	vector<int> CodeSegment::segments{};
 	
 	CodeSegment::CodeSegment(buff_t const & buffer, SegmentDictionaryEntry const dictionaryEntry, int endBlock) :
 		Segment{ dictionaryEntry},
@@ -169,19 +171,26 @@ namespace pcodedump {
 	std::wostream& CodeSegment::writeOut(std::wostream& os) const {
 		writeHeader(os);
 		os << endl;
-		if (showText && interfaceText) {
-			interfaceText->write(os);
-			os << endl;
-		}
-		if (listProcs && codePart) {
-			codePart->disassemble(os, linkageInfo.get());
-			os << endl;
-		}
-		if (showLinkage && linkageInfo) {
-			linkageInfo->write(os);
-			os << endl;
+		if (detailEnabled()) {
+			if (showText && interfaceText) {
+				interfaceText->write(os);
+				os << endl;
+			}
+			if (listProcs && codePart) {
+				codePart->disassemble(os, linkageInfo.get());
+				os << endl;
+			}
+			if (showLinkage && linkageInfo) {
+				linkageInfo->write(os);
+				os << endl;
+			}
 		}
 		return os;
+	}
+
+	bool CodeSegment::detailEnabled() const
+	{
+		return segments.empty() || find(segments.begin(), segments.end(), dictionaryEntry.segmentNumber()) != segments.end();
 	}
 
 	unique_ptr<CodePart> CodeSegment::createCodePart() {

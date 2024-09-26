@@ -64,6 +64,7 @@ namespace pcodedump {
 	}
 
 	CodePart::CodePart(CodeSegment & segment, std::uint8_t const * segBegin, int segLength) :
+		segment{ segment },
 		data{ segBegin, segBegin + segLength },
 		procDict{ ProcedureDictionary::place(segBegin, segLength) },
 		procedures{ extractProcedures() }, treeRoot{ extractTree() }
@@ -154,24 +155,28 @@ namespace pcodedump {
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information.*/
 	unique_ptr<CodePart::Procedures> CodePart::extractProcedures() {
-		map<uint8_t const *, int> procEnds;
-		for (int index = 0; index != procDict.numProcedures; ++index) {
-			procEnds[procDict[index]] = index;
-		}
-
-		auto result = make_unique<Procedures>();
-		auto currentStart = begin();
-		for (auto[end, procNumber] : procEnds) {
-			Range range(currentStart, end);
-			if (*(range.end() - 2)) {
-				result->push_back(make_shared<PcodeProcedure>(*this, procNumber + 1, range));
-			} else {
-				result->push_back(make_shared<Native6502Procedure>(*this, procNumber + 1, range));
+		if (!segment.detailEnabled()) {
+			return unique_ptr<CodePart::Procedures>();
+		} else {
+			map<uint8_t const *, int> procEnds;
+			for (int index = 0; index != procDict.numProcedures; ++index) {
+				procEnds[procDict[index]] = index;
 			}
-			currentStart = end;
-		}
 
-		return result;
+			auto result = make_unique<Procedures>();
+			auto currentStart = begin();
+			for (auto[end, procNumber] : procEnds) {
+				Range range(currentStart, end);
+				if (*(range.end() - 2)) {
+					result->push_back(make_shared<PcodeProcedure>(*this, procNumber + 1, range));
+				} else {
+					result->push_back(make_shared<Native6502Procedure>(*this, procNumber + 1, range));
+				}
+				currentStart = end;
+			}
+
+			return result;
+		}
 	}
 
 	/* Get the procedure code memory ranges and construct a vector of procedure objedts.
@@ -180,32 +185,36 @@ namespace pcodedump {
 	   we need to begin at the start. Once the ranges are known, an object for each
 	   procedure will be constructed with the full information.*/
 	shared_ptr<ScopeNode> CodePart::extractTree() {
-		Procedures  procedures{ *(this->procedures) };
-		sort(::std::begin(procedures), ::std::end(procedures), addressOrder);
-		stack<shared_ptr<ScopeNode>> nativeStack;
-		stack<shared_ptr<ScopeNode>> pcodeStack;
-
-		for (auto procedure : procedures) {
-			if (procedure->getLexicalLevel()) {
-				auto newNode = make_shared<ScopeNode>(procedure);
-				while (!pcodeStack.empty() && newNode->getLexicalLevel() < pcodeStack.top()->getLexicalLevel()) {
-					newNode->add(pcodeStack.top());
-					pcodeStack.pop();
-				}
-				pcodeStack.push(newNode);
-			} else {
-				nativeStack.push(make_shared<ScopeNode>(procedure));
-			}
-		}
-
-		if (pcodeStack.empty()) {
+		if (!segment.detailEnabled()) {
 			return shared_ptr<ScopeNode>();
 		} else {
-			while (!nativeStack.empty()) {
-				pcodeStack.top()->add(nativeStack.top());
-				nativeStack.pop();
+			Procedures  procedures{ *(this->procedures) };
+			sort(::std::begin(procedures), ::std::end(procedures), addressOrder);
+			stack<shared_ptr<ScopeNode>> nativeStack;
+			stack<shared_ptr<ScopeNode>> pcodeStack;
+
+			for (auto procedure : procedures) {
+				if (procedure->getLexicalLevel()) {
+					auto newNode = make_shared<ScopeNode>(procedure);
+					while (!pcodeStack.empty() && newNode->getLexicalLevel() < pcodeStack.top()->getLexicalLevel()) {
+						newNode->add(pcodeStack.top());
+						pcodeStack.pop();
+					}
+					pcodeStack.push(newNode);
+				} else {
+					nativeStack.push(make_shared<ScopeNode>(procedure));
+				}
 			}
-			return  pcodeStack.top();
+
+			if (pcodeStack.empty()) {
+				return shared_ptr<ScopeNode>();
+			} else {
+				while (!nativeStack.empty()) {
+					pcodeStack.top()->add(nativeStack.top());
+					nativeStack.pop();
+				}
+				return  pcodeStack.top();
+			}
 		}
 	}
 
