@@ -38,6 +38,9 @@ namespace pcodedump {
 		int size = comment[0];
 		return wstring{ comment + 1, comment + 1 + size };
 	}
+	SegmentDictionary const & SegmentDictionary::place(std::uint8_t const * buffer) {
+		return *reinterpret_cast<SegmentDictionary const *>(buffer);
+	}
 
 	SegmentDictionaryEntry SegmentDictionary::operator[](int index) const {
 		if (index < 0 || index >= SegmentDictionary::NUM_SEGMENTS) {

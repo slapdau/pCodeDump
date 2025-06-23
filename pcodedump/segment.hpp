@@ -60,10 +60,20 @@ namespace pcodedump {
 
 	class SegmentDictionary {
 		friend class SegmentDictionaryEntry;
+
+	private:
+		SegmentDictionary() = delete;
+		SegmentDictionary(const SegmentDictionary &) = delete;
+		SegmentDictionary(const SegmentDictionary &&) = delete;
+		SegmentDictionary & operator=(const SegmentDictionary &) = delete;
+		SegmentDictionary & operator=(const SegmentDictionary &&) = delete;
+
 	public:
 		using const_iterator = SegmentDictionaryIterator;
-
 		static constexpr int NUM_SEGMENTS = 16;
+
+		static SegmentDictionary const & place(std::uint8_t const *);
+
 		SegmentDictionaryEntry operator[](int index) const;
 		const_iterator begin() const;
 		const_iterator end() const;

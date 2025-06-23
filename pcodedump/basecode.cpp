@@ -34,29 +34,26 @@ using namespace boost::endian;
 namespace pcodedump {
 
 	class ProcedureDictionary final {
+	private:
+		ProcedureDictionary() = delete;
+		ProcedureDictionary(const ProcedureDictionary &) = delete;
+		ProcedureDictionary(const ProcedureDictionary &&) = delete;
+		ProcedureDictionary & operator=(const ProcedureDictionary &) = delete;
+		ProcedureDictionary & operator=(const ProcedureDictionary &&) = delete;
+
 	public:
-		static ProcedureDictionary const & place(std::uint8_t const * segStart, int segLength) {
-			return *reinterpret_cast<ProcedureDictionary const *>(segStart + segLength - sizeof(ProcedureDictionary));
-		}
+		static ProcedureDictionary const & place(std::uint8_t const * segStart, int segLength);
 
 		std::uint8_t const * operator[](int index) const;
-
-
-	private:
-		// Restrict stack allocation.
-		~ProcedureDictionary() = default;
-
-		// Restrict normal heap allocation
-		void * operator new(std::size_t) noexcept { return nullptr; }
-		void operator delete(void * ptr, std::size_t) noexcept {}
-		void * operator new[](std::size_t) noexcept { return nullptr; }
-		void operator delete[](void * ptr, std::size_t) noexcept {}
-
 
 	public:
 		boost::endian::little_uint8_t const segmentNumber;
 		boost::endian::little_uint8_t const numProcedures;
 	};
+
+	ProcedureDictionary const & ProcedureDictionary::place(std::uint8_t const * segStart, int segLength) {
+		return *reinterpret_cast<ProcedureDictionary const *>(segStart + segLength - sizeof(ProcedureDictionary));
+	}
 
 	std::uint8_t const * ProcedureDictionary::operator[](int index) const
 	{

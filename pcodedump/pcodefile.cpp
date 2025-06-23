@@ -29,7 +29,7 @@ namespace pcodedump {
 
 	PcodeFile::PcodeFile(buff_t const & buffer) :
 		buffer{ buffer },
-		segmentDictionary{ *reinterpret_cast<SegmentDictionary const *>(buffer.data()) },
+		segmentDictionary{SegmentDictionary::place(buffer.data())},
 		segments{ extractSegments() }
 	{
 	}
