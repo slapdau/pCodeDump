@@ -54,6 +54,29 @@ namespace {
 
 namespace pcodedump {
 
+	class PcodeProcedure::AttributeTable {
+	private:
+		AttributeTable() = delete;
+		AttributeTable(const AttributeTable &) = delete;
+		AttributeTable(const AttributeTable &&) = delete;
+		AttributeTable & operator=(const AttributeTable &) = delete;
+		AttributeTable & operator=(const AttributeTable &&) = delete;
+
+	public:
+		static AttributeTable const & place(std::uint8_t const * tabStart);
+		boost::endian::little_uint16_t jumpTableStart;
+		boost::endian::little_uint16_t dataSize;
+		boost::endian::little_uint16_t paramaterSize;
+		boost::endian::little_uint16_t exitIc;
+		boost::endian::little_uint16_t enterIc;
+		boost::endian::little_uint8_t procedureNumber;
+		boost::endian::little_uint8_t lexLevel;
+	};
+
+	PcodeProcedure::AttributeTable const & PcodeProcedure::AttributeTable::place(std::uint8_t const * tabStart) {
+		return *reinterpret_cast<AttributeTable const *>(tabStart);
+	}
+
 	class PcodeProcedure::Disassembler final {
 	public:
 		Disassembler(std::wostream& os, PcodeProcedure const& procedure, linkref_map_t& linkage);
@@ -612,19 +635,23 @@ namespace pcodedump {
 
 	PcodeProcedure::PcodeProcedure(CodePart& codePart, int procedureNumber, Range<std::uint8_t const> range) :
 		base(codePart, procedureNumber, range),
-		attributeTable{ reinterpret_cast<AttributeTable const*>(data.end() - sizeof(AttributeTable)) }
+		attributeTable{ AttributeTable::place(data.end() - sizeof(AttributeTable)) }
 	{}
 
+	std::optional<int> PcodeProcedure::getLexicalLevel() const {
+		return attributeTable.lexLevel;
+	}
+
 	std::uint8_t const* PcodeProcedure::getEnterIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const*>(&attributeTable->enterIc));
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const*>(&attributeTable.enterIc));
 	}
 
 	std::uint8_t const* PcodeProcedure::getExitIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const*>(&attributeTable->exitIc));
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const*>(&attributeTable.exitIc));
 	}
 
 	uint8_t const* PcodeProcedure::jtab(int index) const {
-		return reinterpret_cast<uint8_t const*>(&attributeTable->procedureNumber) + index;
+		return reinterpret_cast<uint8_t const*>(&attributeTable.procedureNumber) + index;
 	}
 
 	void PcodeProcedure::writeHeader(std::wostream& os) const {
@@ -633,9 +660,9 @@ namespace pcodedump {
 		os << "Proc #" << dec << setfill(L' ') << left << setw(4) << procedureNumber << L" (";
 		os << hex << setfill(L'0') << right << setw(4) << distance(codePart.begin(), procBegin) << ":" << setw(4) << distance(codePart.begin(), procBegin) + procLength - 1 << ")  P-Code (LSB)   ";
 		os << setfill(L' ') << dec << left;
-		os << L"Lex level = " << setw(4) << attributeTable->lexLevel;
-		os << L"Parameters = " << setw(4) << attributeTable->paramaterSize;
-		os << L"Variables = " << setw(4) << attributeTable->dataSize;
+		os << L"Lex level = " << setw(4) << attributeTable.lexLevel;
+		os << L"Parameters = " << setw(4) << attributeTable.paramaterSize;
+		os << L"Variables = " << setw(4) << attributeTable.dataSize;
 		os << endl;
 	}
 

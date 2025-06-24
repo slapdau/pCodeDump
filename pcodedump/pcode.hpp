@@ -32,23 +32,11 @@ namespace pcodedump {
 
 	class PcodeProcedure : public Procedure {
 
-		struct AttributeTable {
-			boost::endian::little_uint16_t jumpTableStart;
-			boost::endian::little_uint16_t dataSize;
-			boost::endian::little_uint16_t paramaterSize;
-			boost::endian::little_uint16_t exitIc;
-			boost::endian::little_uint16_t enterIc;
-			boost::endian::little_uint8_t procedureNumber;
-			boost::endian::little_uint8_t lexLevel;
-		};
-
 	public:
 		using base = Procedure;
 		PcodeProcedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range);
 
-		std::optional<int> getLexicalLevel() const override {
-			return attributeTable->lexLevel;
-		}
+		std::optional<int> getLexicalLevel() const override;
 
 		void writeHeader(std::wostream& os) const override;
 		void disassemble(std::wostream& os, linkref_map_t & linkage) const override;
@@ -61,7 +49,8 @@ namespace pcodedump {
 		void printIc(std::wostream& os, std::uint8_t const * current)  const;
 
 	private:
-		AttributeTable const * attributeTable;
+		class AttributeTable;
+		AttributeTable const & attributeTable;
 
 		class Disassembler;
 	};
