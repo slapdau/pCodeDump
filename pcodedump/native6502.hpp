@@ -31,12 +31,6 @@
 namespace pcodedump {
 
 	class Native6502Procedure : public Procedure {
-
-		struct AttributeTable {
-			boost::endian::little_uint16_t enterIc;
-			boost::endian::little_uint8_t procedureNumber;
-			boost::endian::little_uint8_t relocationSeg;
-		};
 	public:
 		using base = Procedure;
 		Native6502Procedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> range);
@@ -59,7 +53,8 @@ namespace pcodedump {
 
 		void printIc(std::wostream& os, std::uint8_t const * current) const;
 
-		AttributeTable const * attributeTable;
+		class AttributeTable;
+		AttributeTable const & attributeTable;
 		uint8_t const * procEnd;
 
 	public:

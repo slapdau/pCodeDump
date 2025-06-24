@@ -51,6 +51,25 @@ namespace pcodedump {
 
 	}
 
+	class Native6502Procedure::AttributeTable {
+	private:
+		AttributeTable() = delete;
+		AttributeTable(const AttributeTable &) = delete;
+		AttributeTable(const AttributeTable &&) = delete;
+		AttributeTable & operator=(const AttributeTable &) = delete;
+		AttributeTable & operator=(const AttributeTable &&) = delete;
+
+	public:
+		static AttributeTable const & place(std::uint8_t const * tabStart);
+		boost::endian::little_uint16_t enterIc;
+		boost::endian::little_uint8_t procedureNumber;
+		boost::endian::little_uint8_t relocationSeg;
+	};
+
+	Native6502Procedure::AttributeTable const & Native6502Procedure::AttributeTable::place(std::uint8_t const * tabStart) {
+		return *reinterpret_cast<AttributeTable const *>(tabStart);
+	}
+
 	class Native6502Procedure::Disassembler final {
 	public:
 		Disassembler(std::wostream & os, Native6502Procedure const & procedure, linkref_map_t & linkage);
@@ -553,8 +572,8 @@ namespace pcodedump {
 		} else if (pcodedump::contains(procedure.interpRelocations, address)) {
 			result << L".interp+";
 		} else if (pcodedump::contains(procedure.baseRelocations, address)) {
-			if (procedure.attributeTable->relocationSeg != 0) {
-				result << L".seg#" << dec << procedure.attributeTable->relocationSeg << L"+";
+			if (procedure.attributeTable.relocationSeg != 0) {
+				result << L".seg#" << dec << procedure.attributeTable.relocationSeg << L"+";
 			} else {
 				result << L".base+";
 			}
@@ -575,7 +594,7 @@ namespace pcodedump {
 
 	Native6502Procedure::Native6502Procedure(CodePart & codePart, int procedureNumber, Range<std::uint8_t const> data) :
 		base(codePart, procedureNumber, data),
-		attributeTable{ reinterpret_cast<AttributeTable const *>(data.end() - sizeof(AttributeTable)) }
+		attributeTable{ AttributeTable::place(data.end() - sizeof(AttributeTable)) }
 	{
 		this->procEnd = data.end() - sizeof(AttributeTable);
 		for (auto table : { &baseRelocations, &segRelocations, &procRelocations, &interpRelocations }) {
@@ -608,7 +627,7 @@ namespace pcodedump {
 	}
 
 	std::uint8_t const * Native6502Procedure::getEnterIc() const {
-		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&attributeTable->enterIc));
+		return derefSelfPtr(reinterpret_cast<std::uint8_t const *>(&attributeTable.enterIc));
 	}
 
 	/* Write the instruction address, relative to the segment start.  Indicate the procedure entry point. */
