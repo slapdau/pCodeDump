@@ -25,54 +25,13 @@
 #include <iterator>
 
 #include <boost/endian/arithmetic.hpp>
+#include <boost/align/aligned_allocator.hpp>
 
 namespace pcodedump {
 
 	constexpr unsigned int BLOCK_SIZE = 512;
 
-    template<typename T, std::align_val_t ALIGNMENT = static_cast<std::align_val_t>(sizeof(std::max_align_t))>
-    class AlignedAllocator
-    {
-        static_assert(static_cast<std::size_t>(ALIGNMENT) >= alignof(T), "Overalignment size too small for type T");
-
-    public:
-        using value_type = T;
-        static std::align_val_t constexpr ALIGNMENT{ ALIGNMENT };
-
-        using size_type = std::size_t;
-
-        template<class U>
-        struct rebind
-        {
-            using other = AlignedAllocator<U, ALIGNMENT>;
-        };
-
-        constexpr AlignedAllocator() noexcept = default;
-
-        constexpr AlignedAllocator(const AlignedAllocator&) noexcept = default;
-
-        template<typename U>
-        constexpr AlignedAllocator(AlignedAllocator<U, ALIGNMENT> const&) noexcept {}
-
-        static constexpr size_type max_size() {
-            return std::numeric_limits<std::size_t>::max() / sizeof(T);
-        }
-
-        [[nodiscard]] T* allocate(std::size_t n) {
-            if (n > max_size()) {
-                throw std::bad_array_new_length();
-            }
-            return reinterpret_cast<T*>(::operator new[](n * sizeof(T), ALIGNMENT));
-        }
-
-        void
-            deallocate(T* p, [[maybe_unused]] std::size_t n)
-        {
-            ::operator delete[](p, ALIGNMENT);
-        }
-    };
-
-    using buff_t = std::vector<std::uint8_t, AlignedAllocator<std::uint8_t, static_cast<std::align_val_t>(BLOCK_SIZE)>>;
+    using buff_t = std::vector<std::uint8_t, boost::alignment::aligned_allocator<std::uint8_t, BLOCK_SIZE>>;
 
     template <typename T>
     T const & place(std::uint8_t const * address) {
