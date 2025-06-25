@@ -16,6 +16,7 @@
 
 #include "linkage.hpp"
 #include "segment.hpp"
+#include "types.hpp"
 #include <iostream>
 #include <string>
 #include <map>
@@ -67,11 +68,6 @@ namespace pcodedump {
 			return os;
 		}
 
-	}
-
-	template <typename T>
-	T const & place(std::uint8_t const * address) {
-		return *reinterpret_cast<T const *>(address);
 	}
 
 	LinkRecord::LinkRecord(std::wstring name, std::uint8_t const * fieldStart) : name{ name }, fieldStart{ fieldStart }

@@ -74,7 +74,12 @@ namespace pcodedump {
 
     using buff_t = std::vector<std::uint8_t, AlignedAllocator<std::uint8_t, static_cast<std::align_val_t>(BLOCK_SIZE)>>;
 
-	inline std::uint8_t const * derefSelfPtr(void const * selfPtr) {
+    template <typename T>
+    T const & place(std::uint8_t const * address) {
+        return *reinterpret_cast<T const *>(address);
+    }
+
+    inline std::uint8_t const * derefSelfPtr(void const * selfPtr) {
 		return static_cast<std::uint8_t const *>(selfPtr) - *reinterpret_cast<boost::endian::little_int16_t const *>(selfPtr);
 	}
 

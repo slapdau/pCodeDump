@@ -20,6 +20,7 @@
 #include "text.hpp"
 #include "textio.hpp"
 #include "options.hpp"
+#include "types.hpp"
 #include <map>
 #include <cassert>
 #include <stdexcept>
@@ -39,7 +40,7 @@ namespace pcodedump {
 		return wstring{ comment + 1, comment + 1 + size };
 	}
 	SegmentDictionary const & SegmentDictionary::place(std::uint8_t const * buffer) {
-		return *reinterpret_cast<SegmentDictionary const *>(buffer);
+		return pcodedump::place<SegmentDictionary>(buffer);
 	}
 
 	SegmentDictionaryEntry SegmentDictionary::operator[](int index) const {

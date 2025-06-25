@@ -67,7 +67,7 @@ namespace pcodedump {
 	};
 
 	Native6502Procedure::AttributeTable const & Native6502Procedure::AttributeTable::place(std::uint8_t const * tabStart) {
-		return *reinterpret_cast<AttributeTable const *>(tabStart);
+		return pcodedump::place<AttributeTable>(tabStart);
 	}
 
 	class Native6502Procedure::Disassembler final {

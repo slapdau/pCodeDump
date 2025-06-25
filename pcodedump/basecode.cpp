@@ -52,7 +52,7 @@ namespace pcodedump {
 	};
 
 	ProcedureDictionary const & ProcedureDictionary::place(std::uint8_t const * segStart, int segLength) {
-		return *reinterpret_cast<ProcedureDictionary const *>(segStart + segLength - sizeof(ProcedureDictionary));
+		return pcodedump::place<ProcedureDictionary>(segStart + segLength - sizeof(ProcedureDictionary));
 	}
 
 	std::uint8_t const * ProcedureDictionary::operator[](int index) const

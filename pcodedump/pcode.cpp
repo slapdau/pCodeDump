@@ -74,7 +74,7 @@ namespace pcodedump {
 	};
 
 	PcodeProcedure::AttributeTable const & PcodeProcedure::AttributeTable::place(std::uint8_t const * tabStart) {
-		return *reinterpret_cast<AttributeTable const *>(tabStart);
+		return pcodedump::place<AttributeTable>(tabStart);
 	}
 
 	class PcodeProcedure::Disassembler final {
